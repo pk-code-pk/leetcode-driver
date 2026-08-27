@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { tick } from "@/lib/engine";
 
 export const dynamic = "force-dynamic";
+// sync + escalation can take a few seconds
+export const maxDuration = 60;
 
 /** Manual/external trigger, for platforms without a long-running process. */
 export async function GET(req: Request) {

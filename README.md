@@ -49,6 +49,35 @@ Pattern notes work the same way: Claude summarizes *your* accepted solution when
 is set; otherwise the solve message shows the canonical LeetCode tags. Tags and official
 hints are fetched once at seed time and cached, so nothing is scraped at runtime.
 
+## Deploying for $0
+
+Nothing here needs an always-on process. Cron and Telegram callbacks are both
+request-driven, so a serverless host works and there is nothing to spin down.
+
+| Piece | Service | Cost |
+|---|---|---|
+| App | Vercel | free |
+| Postgres | Supabase | free |
+| Cron (every 5 min) | cron-job.org -> `GET /api/cron` | free |
+| Telegram | webhook (Telegram calls you) | free |
+
+1. Supabase -> new project -> copy the connection string (use the **session pooler**
+   URI; serverless opens many short-lived connections).
+2. Import the repo on Vercel. Set env vars: `DATABASE_URL`, `SECRET_KEY`,
+   `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `DRIVER_TOKEN`, `PUBLIC_URL`
+   (your vercel.app URL), and `DISABLE_CRON=1`.
+3. Locally, with the same `DATABASE_URL`: `npm run db:push && npm run seed`.
+4. `npm run telegram:register` to point the bot at the deployment.
+5. cron-job.org -> new job -> `https://<you>.vercel.app/api/cron`, every 5 minutes,
+   with header `Authorization: Bearer <DRIVER_TOKEN>`.
+
+`DISABLE_CRON=1` matters: serverless functions are frozen between requests, so an
+in-process scheduler would never fire. The external pinger is what drives the clock.
+
+Paid hosts (Railway ~$5/mo, Fly ~$2/mo) only buy you a long-lived process, which
+this design doesn't need. Render's free tier is the trap — it sleeps, and a sleeping
+service can't nag you.
+
 ## Running locally (no deploy, no public URL)
 
 Telegram can't reach `localhost` with a webhook, so the app long-polls instead —
