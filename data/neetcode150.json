@@ -1,0 +1,1067 @@
+{
+  "name": "NeetCode 150",
+  "topics": [
+    {
+      "key": "arrays-hashing",
+      "label": "Arrays & Hashing",
+      "prereqs": [],
+      "problems": [
+        {
+          "slug": "contains-duplicate",
+          "title": "Contains Duplicate",
+          "difficulty": "Easy",
+          "number": 217
+        },
+        {
+          "slug": "valid-anagram",
+          "title": "Valid Anagram",
+          "difficulty": "Easy",
+          "number": 242
+        },
+        {
+          "slug": "two-sum",
+          "title": "Two Sum",
+          "difficulty": "Easy",
+          "number": 1
+        },
+        {
+          "slug": "group-anagrams",
+          "title": "Group Anagrams",
+          "difficulty": "Medium",
+          "number": 49
+        },
+        {
+          "slug": "top-k-frequent-elements",
+          "title": "Top K Frequent Elements",
+          "difficulty": "Medium",
+          "number": 347
+        },
+        {
+          "slug": "encode-and-decode-strings",
+          "title": "Encode and Decode Strings",
+          "difficulty": "Medium",
+          "number": 271
+        },
+        {
+          "slug": "product-of-array-except-self",
+          "title": "Product of Array Except Self",
+          "difficulty": "Medium",
+          "number": 238
+        },
+        {
+          "slug": "valid-sudoku",
+          "title": "Valid Sudoku",
+          "difficulty": "Medium",
+          "number": 36
+        },
+        {
+          "slug": "longest-consecutive-sequence",
+          "title": "Longest Consecutive Sequence",
+          "difficulty": "Medium",
+          "number": 128
+        }
+      ]
+    },
+    {
+      "key": "two-pointers",
+      "label": "Two Pointers",
+      "prereqs": [
+        "arrays-hashing"
+      ],
+      "problems": [
+        {
+          "slug": "valid-palindrome",
+          "title": "Valid Palindrome",
+          "difficulty": "Easy",
+          "number": 125
+        },
+        {
+          "slug": "two-sum-ii-input-array-is-sorted",
+          "title": "Two Sum II Input Array Is Sorted",
+          "difficulty": "Medium",
+          "number": 167
+        },
+        {
+          "slug": "3sum",
+          "title": "3Sum",
+          "difficulty": "Medium",
+          "number": 15
+        },
+        {
+          "slug": "container-with-most-water",
+          "title": "Container With Most Water",
+          "difficulty": "Medium",
+          "number": 11
+        },
+        {
+          "slug": "trapping-rain-water",
+          "title": "Trapping Rain Water",
+          "difficulty": "Hard",
+          "number": 42
+        }
+      ]
+    },
+    {
+      "key": "sliding-window",
+      "label": "Sliding Window",
+      "prereqs": [
+        "two-pointers"
+      ],
+      "problems": [
+        {
+          "slug": "best-time-to-buy-and-sell-stock",
+          "title": "Best Time to Buy And Sell Stock",
+          "difficulty": "Easy",
+          "number": 121
+        },
+        {
+          "slug": "longest-substring-without-repeating-characters",
+          "title": "Longest Substring Without Repeating Characters",
+          "difficulty": "Medium",
+          "number": 3
+        },
+        {
+          "slug": "longest-repeating-character-replacement",
+          "title": "Longest Repeating Character Replacement",
+          "difficulty": "Medium",
+          "number": 424
+        },
+        {
+          "slug": "permutation-in-string",
+          "title": "Permutation In String",
+          "difficulty": "Medium",
+          "number": 567
+        },
+        {
+          "slug": "minimum-window-substring",
+          "title": "Minimum Window Substring",
+          "difficulty": "Hard",
+          "number": 76
+        },
+        {
+          "slug": "sliding-window-maximum",
+          "title": "Sliding Window Maximum",
+          "difficulty": "Hard",
+          "number": 239
+        }
+      ]
+    },
+    {
+      "key": "stack",
+      "label": "Stack",
+      "prereqs": [
+        "arrays-hashing"
+      ],
+      "problems": [
+        {
+          "slug": "valid-parentheses",
+          "title": "Valid Parentheses",
+          "difficulty": "Easy",
+          "number": 20
+        },
+        {
+          "slug": "min-stack",
+          "title": "Min Stack",
+          "difficulty": "Medium",
+          "number": 155
+        },
+        {
+          "slug": "evaluate-reverse-polish-notation",
+          "title": "Evaluate Reverse Polish Notation",
+          "difficulty": "Medium",
+          "number": 150
+        },
+        {
+          "slug": "generate-parentheses",
+          "title": "Generate Parentheses",
+          "difficulty": "Medium",
+          "number": 22
+        },
+        {
+          "slug": "daily-temperatures",
+          "title": "Daily Temperatures",
+          "difficulty": "Medium",
+          "number": 739
+        },
+        {
+          "slug": "car-fleet",
+          "title": "Car Fleet",
+          "difficulty": "Medium",
+          "number": 853
+        },
+        {
+          "slug": "largest-rectangle-in-histogram",
+          "title": "Largest Rectangle In Histogram",
+          "difficulty": "Hard",
+          "number": 84
+        }
+      ]
+    },
+    {
+      "key": "binary-search",
+      "label": "Binary Search",
+      "prereqs": [
+        "two-pointers"
+      ],
+      "problems": [
+        {
+          "slug": "binary-search",
+          "title": "Binary Search",
+          "difficulty": "Easy",
+          "number": 704
+        },
+        {
+          "slug": "search-a-2d-matrix",
+          "title": "Search a 2D Matrix",
+          "difficulty": "Medium",
+          "number": 74
+        },
+        {
+          "slug": "koko-eating-bananas",
+          "title": "Koko Eating Bananas",
+          "difficulty": "Medium",
+          "number": 875
+        },
+        {
+          "slug": "find-minimum-in-rotated-sorted-array",
+          "title": "Find Minimum In Rotated Sorted Array",
+          "difficulty": "Medium",
+          "number": 153
+        },
+        {
+          "slug": "search-in-rotated-sorted-array",
+          "title": "Search In Rotated Sorted Array",
+          "difficulty": "Medium",
+          "number": 33
+        },
+        {
+          "slug": "time-based-key-value-store",
+          "title": "Time Based Key Value Store",
+          "difficulty": "Medium",
+          "number": 981
+        },
+        {
+          "slug": "median-of-two-sorted-arrays",
+          "title": "Median of Two Sorted Arrays",
+          "difficulty": "Hard",
+          "number": 4
+        }
+      ]
+    },
+    {
+      "key": "linked-list",
+      "label": "Linked List",
+      "prereqs": [
+        "two-pointers"
+      ],
+      "problems": [
+        {
+          "slug": "reverse-linked-list",
+          "title": "Reverse Linked List",
+          "difficulty": "Easy",
+          "number": 206
+        },
+        {
+          "slug": "merge-two-sorted-lists",
+          "title": "Merge Two Sorted Lists",
+          "difficulty": "Easy",
+          "number": 21
+        },
+        {
+          "slug": "reorder-list",
+          "title": "Reorder List",
+          "difficulty": "Medium",
+          "number": 143
+        },
+        {
+          "slug": "remove-nth-node-from-end-of-list",
+          "title": "Remove Nth Node From End of List",
+          "difficulty": "Medium",
+          "number": 19
+        },
+        {
+          "slug": "copy-list-with-random-pointer",
+          "title": "Copy List With Random Pointer",
+          "difficulty": "Medium",
+          "number": 138
+        },
+        {
+          "slug": "add-two-numbers",
+          "title": "Add Two Numbers",
+          "difficulty": "Medium",
+          "number": 2
+        },
+        {
+          "slug": "linked-list-cycle",
+          "title": "Linked List Cycle",
+          "difficulty": "Easy",
+          "number": 141
+        },
+        {
+          "slug": "find-the-duplicate-number",
+          "title": "Find The Duplicate Number",
+          "difficulty": "Medium",
+          "number": 287
+        },
+        {
+          "slug": "lru-cache",
+          "title": "LRU Cache",
+          "difficulty": "Medium",
+          "number": 146
+        },
+        {
+          "slug": "merge-k-sorted-lists",
+          "title": "Merge K Sorted Lists",
+          "difficulty": "Hard",
+          "number": 23
+        },
+        {
+          "slug": "reverse-nodes-in-k-group",
+          "title": "Reverse Nodes In K Group",
+          "difficulty": "Hard",
+          "number": 25
+        }
+      ]
+    },
+    {
+      "key": "trees",
+      "label": "Trees",
+      "prereqs": [
+        "linked-list",
+        "stack"
+      ],
+      "problems": [
+        {
+          "slug": "invert-binary-tree",
+          "title": "Invert Binary Tree",
+          "difficulty": "Easy",
+          "number": 226
+        },
+        {
+          "slug": "maximum-depth-of-binary-tree",
+          "title": "Maximum Depth of Binary Tree",
+          "difficulty": "Easy",
+          "number": 104
+        },
+        {
+          "slug": "diameter-of-binary-tree",
+          "title": "Diameter of Binary Tree",
+          "difficulty": "Easy",
+          "number": 543
+        },
+        {
+          "slug": "balanced-binary-tree",
+          "title": "Balanced Binary Tree",
+          "difficulty": "Easy",
+          "number": 110
+        },
+        {
+          "slug": "same-tree",
+          "title": "Same Tree",
+          "difficulty": "Easy",
+          "number": 100
+        },
+        {
+          "slug": "subtree-of-another-tree",
+          "title": "Subtree of Another Tree",
+          "difficulty": "Easy",
+          "number": 572
+        },
+        {
+          "slug": "lowest-common-ancestor-of-a-binary-search-tree",
+          "title": "Lowest Common Ancestor of a Binary Search Tree",
+          "difficulty": "Medium",
+          "number": 235
+        },
+        {
+          "slug": "binary-tree-level-order-traversal",
+          "title": "Binary Tree Level Order Traversal",
+          "difficulty": "Medium",
+          "number": 102
+        },
+        {
+          "slug": "binary-tree-right-side-view",
+          "title": "Binary Tree Right Side View",
+          "difficulty": "Medium",
+          "number": 199
+        },
+        {
+          "slug": "count-good-nodes-in-binary-tree",
+          "title": "Count Good Nodes In Binary Tree",
+          "difficulty": "Medium",
+          "number": 1448
+        },
+        {
+          "slug": "validate-binary-search-tree",
+          "title": "Validate Binary Search Tree",
+          "difficulty": "Medium",
+          "number": 98
+        },
+        {
+          "slug": "kth-smallest-element-in-a-bst",
+          "title": "Kth Smallest Element In a Bst",
+          "difficulty": "Medium",
+          "number": 230
+        },
+        {
+          "slug": "construct-binary-tree-from-preorder-and-inorder-traversal",
+          "title": "Construct Binary Tree From Preorder And Inorder Traversal",
+          "difficulty": "Medium",
+          "number": 105
+        },
+        {
+          "slug": "binary-tree-maximum-path-sum",
+          "title": "Binary Tree Maximum Path Sum",
+          "difficulty": "Hard",
+          "number": 124
+        },
+        {
+          "slug": "serialize-and-deserialize-binary-tree",
+          "title": "Serialize And Deserialize Binary Tree",
+          "difficulty": "Hard",
+          "number": 297
+        }
+      ]
+    },
+    {
+      "key": "tries",
+      "label": "Tries",
+      "prereqs": [
+        "trees"
+      ],
+      "problems": [
+        {
+          "slug": "implement-trie-prefix-tree",
+          "title": "Implement Trie Prefix Tree",
+          "difficulty": "Medium",
+          "number": 208
+        },
+        {
+          "slug": "design-add-and-search-words-data-structure",
+          "title": "Design Add And Search Words Data Structure",
+          "difficulty": "Medium",
+          "number": 211
+        },
+        {
+          "slug": "word-search-ii",
+          "title": "Word Search II",
+          "difficulty": "Hard",
+          "number": 212
+        }
+      ]
+    },
+    {
+      "key": "heap",
+      "label": "Heap / Priority Queue",
+      "prereqs": [
+        "trees"
+      ],
+      "problems": [
+        {
+          "slug": "kth-largest-element-in-a-stream",
+          "title": "Kth Largest Element In a Stream",
+          "difficulty": "Easy",
+          "number": 703
+        },
+        {
+          "slug": "last-stone-weight",
+          "title": "Last Stone Weight",
+          "difficulty": "Easy",
+          "number": 1046
+        },
+        {
+          "slug": "k-closest-points-to-origin",
+          "title": "K Closest Points to Origin",
+          "difficulty": "Medium",
+          "number": 973
+        },
+        {
+          "slug": "kth-largest-element-in-an-array",
+          "title": "Kth Largest Element In An Array",
+          "difficulty": "Medium",
+          "number": 215
+        },
+        {
+          "slug": "task-scheduler",
+          "title": "Task Scheduler",
+          "difficulty": "Medium",
+          "number": 621
+        },
+        {
+          "slug": "design-twitter",
+          "title": "Design Twitter",
+          "difficulty": "Medium",
+          "number": 355
+        },
+        {
+          "slug": "find-median-from-data-stream",
+          "title": "Find Median From Data Stream",
+          "difficulty": "Hard",
+          "number": 295
+        }
+      ]
+    },
+    {
+      "key": "backtracking",
+      "label": "Backtracking",
+      "prereqs": [
+        "trees"
+      ],
+      "problems": [
+        {
+          "slug": "subsets",
+          "title": "Subsets",
+          "difficulty": "Medium",
+          "number": 78
+        },
+        {
+          "slug": "combination-sum",
+          "title": "Combination Sum",
+          "difficulty": "Medium",
+          "number": 39
+        },
+        {
+          "slug": "permutations",
+          "title": "Permutations",
+          "difficulty": "Medium",
+          "number": 46
+        },
+        {
+          "slug": "subsets-ii",
+          "title": "Subsets II",
+          "difficulty": "Medium",
+          "number": 90
+        },
+        {
+          "slug": "combination-sum-ii",
+          "title": "Combination Sum II",
+          "difficulty": "Medium",
+          "number": 40
+        },
+        {
+          "slug": "word-search",
+          "title": "Word Search",
+          "difficulty": "Medium",
+          "number": 79
+        },
+        {
+          "slug": "palindrome-partitioning",
+          "title": "Palindrome Partitioning",
+          "difficulty": "Medium",
+          "number": 131
+        },
+        {
+          "slug": "letter-combinations-of-a-phone-number",
+          "title": "Letter Combinations of a Phone Number",
+          "difficulty": "Medium",
+          "number": 17
+        },
+        {
+          "slug": "n-queens",
+          "title": "N Queens",
+          "difficulty": "Hard",
+          "number": 51
+        }
+      ]
+    },
+    {
+      "key": "graphs",
+      "label": "Graphs",
+      "prereqs": [
+        "backtracking"
+      ],
+      "problems": [
+        {
+          "slug": "number-of-islands",
+          "title": "Number of Islands",
+          "difficulty": "Medium",
+          "number": 200
+        },
+        {
+          "slug": "clone-graph",
+          "title": "Clone Graph",
+          "difficulty": "Medium",
+          "number": 133
+        },
+        {
+          "slug": "max-area-of-island",
+          "title": "Max Area of Island",
+          "difficulty": "Medium",
+          "number": 695
+        },
+        {
+          "slug": "pacific-atlantic-water-flow",
+          "title": "Pacific Atlantic Water Flow",
+          "difficulty": "Medium",
+          "number": 417
+        },
+        {
+          "slug": "surrounded-regions",
+          "title": "Surrounded Regions",
+          "difficulty": "Medium",
+          "number": 130
+        },
+        {
+          "slug": "rotting-oranges",
+          "title": "Rotting Oranges",
+          "difficulty": "Medium",
+          "number": 994
+        },
+        {
+          "slug": "walls-and-gates",
+          "title": "Walls And Gates",
+          "difficulty": "Medium",
+          "number": 286
+        },
+        {
+          "slug": "course-schedule",
+          "title": "Course Schedule",
+          "difficulty": "Medium",
+          "number": 207
+        },
+        {
+          "slug": "course-schedule-ii",
+          "title": "Course Schedule II",
+          "difficulty": "Medium",
+          "number": 210
+        },
+        {
+          "slug": "redundant-connection",
+          "title": "Redundant Connection",
+          "difficulty": "Medium",
+          "number": 684
+        },
+        {
+          "slug": "number-of-connected-components-in-an-undirected-graph",
+          "title": "Number of Connected Components In An Undirected Graph",
+          "difficulty": "Medium",
+          "number": 323
+        },
+        {
+          "slug": "graph-valid-tree",
+          "title": "Graph Valid Tree",
+          "difficulty": "Medium",
+          "number": 261
+        },
+        {
+          "slug": "word-ladder",
+          "title": "Word Ladder",
+          "difficulty": "Hard",
+          "number": 127
+        }
+      ]
+    },
+    {
+      "key": "advanced-graphs",
+      "label": "Advanced Graphs",
+      "prereqs": [
+        "graphs",
+        "heap"
+      ],
+      "problems": [
+        {
+          "slug": "reconstruct-itinerary",
+          "title": "Reconstruct Itinerary",
+          "difficulty": "Hard",
+          "number": 332
+        },
+        {
+          "slug": "min-cost-to-connect-all-points",
+          "title": "Min Cost to Connect All Points",
+          "difficulty": "Medium",
+          "number": 1584
+        },
+        {
+          "slug": "network-delay-time",
+          "title": "Network Delay Time",
+          "difficulty": "Medium",
+          "number": 743
+        },
+        {
+          "slug": "swim-in-rising-water",
+          "title": "Swim In Rising Water",
+          "difficulty": "Hard",
+          "number": 778
+        },
+        {
+          "slug": "alien-dictionary",
+          "title": "Alien Dictionary",
+          "difficulty": "Hard",
+          "number": 269
+        },
+        {
+          "slug": "cheapest-flights-within-k-stops",
+          "title": "Cheapest Flights Within K Stops",
+          "difficulty": "Medium",
+          "number": 787
+        }
+      ]
+    },
+    {
+      "key": "dp-1d",
+      "label": "1-D Dynamic Programming",
+      "prereqs": [
+        "backtracking"
+      ],
+      "problems": [
+        {
+          "slug": "climbing-stairs",
+          "title": "Climbing Stairs",
+          "difficulty": "Easy",
+          "number": 70
+        },
+        {
+          "slug": "min-cost-climbing-stairs",
+          "title": "Min Cost Climbing Stairs",
+          "difficulty": "Easy",
+          "number": 746
+        },
+        {
+          "slug": "house-robber",
+          "title": "House Robber",
+          "difficulty": "Medium",
+          "number": 198
+        },
+        {
+          "slug": "house-robber-ii",
+          "title": "House Robber II",
+          "difficulty": "Medium",
+          "number": 213
+        },
+        {
+          "slug": "longest-palindromic-substring",
+          "title": "Longest Palindromic Substring",
+          "difficulty": "Medium",
+          "number": 5
+        },
+        {
+          "slug": "palindromic-substrings",
+          "title": "Palindromic Substrings",
+          "difficulty": "Medium",
+          "number": 647
+        },
+        {
+          "slug": "decode-ways",
+          "title": "Decode Ways",
+          "difficulty": "Medium",
+          "number": 91
+        },
+        {
+          "slug": "coin-change",
+          "title": "Coin Change",
+          "difficulty": "Medium",
+          "number": 322
+        },
+        {
+          "slug": "maximum-product-subarray",
+          "title": "Maximum Product Subarray",
+          "difficulty": "Medium",
+          "number": 152
+        },
+        {
+          "slug": "word-break",
+          "title": "Word Break",
+          "difficulty": "Medium",
+          "number": 139
+        },
+        {
+          "slug": "longest-increasing-subsequence",
+          "title": "Longest Increasing Subsequence",
+          "difficulty": "Medium",
+          "number": 300
+        },
+        {
+          "slug": "partition-equal-subset-sum",
+          "title": "Partition Equal Subset Sum",
+          "difficulty": "Medium",
+          "number": 416
+        }
+      ]
+    },
+    {
+      "key": "dp-2d",
+      "label": "2-D Dynamic Programming",
+      "prereqs": [
+        "dp-1d"
+      ],
+      "problems": [
+        {
+          "slug": "unique-paths",
+          "title": "Unique Paths",
+          "difficulty": "Medium",
+          "number": 62
+        },
+        {
+          "slug": "longest-common-subsequence",
+          "title": "Longest Common Subsequence",
+          "difficulty": "Medium",
+          "number": 1143
+        },
+        {
+          "slug": "best-time-to-buy-and-sell-stock-with-cooldown",
+          "title": "Best Time to Buy And Sell Stock With Cooldown",
+          "difficulty": "Medium",
+          "number": 309
+        },
+        {
+          "slug": "coin-change-ii",
+          "title": "Coin Change II",
+          "difficulty": "Medium",
+          "number": 518
+        },
+        {
+          "slug": "target-sum",
+          "title": "Target Sum",
+          "difficulty": "Medium",
+          "number": 494
+        },
+        {
+          "slug": "interleaving-string",
+          "title": "Interleaving String",
+          "difficulty": "Medium",
+          "number": 97
+        },
+        {
+          "slug": "longest-increasing-path-in-a-matrix",
+          "title": "Longest Increasing Path In a Matrix",
+          "difficulty": "Hard",
+          "number": 329
+        },
+        {
+          "slug": "distinct-subsequences",
+          "title": "Distinct Subsequences",
+          "difficulty": "Hard",
+          "number": 115
+        },
+        {
+          "slug": "edit-distance",
+          "title": "Edit Distance",
+          "difficulty": "Medium",
+          "number": 72
+        },
+        {
+          "slug": "burst-balloons",
+          "title": "Burst Balloons",
+          "difficulty": "Hard",
+          "number": 312
+        },
+        {
+          "slug": "regular-expression-matching",
+          "title": "Regular Expression Matching",
+          "difficulty": "Hard",
+          "number": 10
+        }
+      ]
+    },
+    {
+      "key": "greedy",
+      "label": "Greedy",
+      "prereqs": [
+        "arrays-hashing"
+      ],
+      "problems": [
+        {
+          "slug": "maximum-subarray",
+          "title": "Maximum Subarray",
+          "difficulty": "Medium",
+          "number": 53
+        },
+        {
+          "slug": "jump-game",
+          "title": "Jump Game",
+          "difficulty": "Medium",
+          "number": 55
+        },
+        {
+          "slug": "jump-game-ii",
+          "title": "Jump Game II",
+          "difficulty": "Medium",
+          "number": 45
+        },
+        {
+          "slug": "gas-station",
+          "title": "Gas Station",
+          "difficulty": "Medium",
+          "number": 134
+        },
+        {
+          "slug": "hand-of-straights",
+          "title": "Hand of Straights",
+          "difficulty": "Medium",
+          "number": 846
+        },
+        {
+          "slug": "merge-triplets-to-form-target-triplet",
+          "title": "Merge Triplets to Form Target Triplet",
+          "difficulty": "Medium",
+          "number": 1899
+        },
+        {
+          "slug": "partition-labels",
+          "title": "Partition Labels",
+          "difficulty": "Medium",
+          "number": 763
+        },
+        {
+          "slug": "valid-parenthesis-string",
+          "title": "Valid Parenthesis String",
+          "difficulty": "Medium",
+          "number": 678
+        }
+      ]
+    },
+    {
+      "key": "intervals",
+      "label": "Intervals",
+      "prereqs": [
+        "greedy"
+      ],
+      "problems": [
+        {
+          "slug": "insert-interval",
+          "title": "Insert Interval",
+          "difficulty": "Medium",
+          "number": 57
+        },
+        {
+          "slug": "merge-intervals",
+          "title": "Merge Intervals",
+          "difficulty": "Medium",
+          "number": 56
+        },
+        {
+          "slug": "non-overlapping-intervals",
+          "title": "Non Overlapping Intervals",
+          "difficulty": "Medium",
+          "number": 435
+        },
+        {
+          "slug": "meeting-rooms",
+          "title": "Meeting Rooms",
+          "difficulty": "Easy",
+          "number": 252
+        },
+        {
+          "slug": "meeting-rooms-ii",
+          "title": "Meeting Rooms II",
+          "difficulty": "Medium",
+          "number": 253
+        },
+        {
+          "slug": "minimum-interval-to-include-each-query",
+          "title": "Minimum Interval to Include Each Query",
+          "difficulty": "Hard",
+          "number": 1851
+        }
+      ]
+    },
+    {
+      "key": "math-geometry",
+      "label": "Math & Geometry",
+      "prereqs": [
+        "arrays-hashing"
+      ],
+      "problems": [
+        {
+          "slug": "rotate-image",
+          "title": "Rotate Image",
+          "difficulty": "Medium",
+          "number": 48
+        },
+        {
+          "slug": "spiral-matrix",
+          "title": "Spiral Matrix",
+          "difficulty": "Medium",
+          "number": 54
+        },
+        {
+          "slug": "set-matrix-zeroes",
+          "title": "Set Matrix Zeroes",
+          "difficulty": "Medium",
+          "number": 73
+        },
+        {
+          "slug": "happy-number",
+          "title": "Happy Number",
+          "difficulty": "Easy",
+          "number": 202
+        },
+        {
+          "slug": "plus-one",
+          "title": "Plus One",
+          "difficulty": "Easy",
+          "number": 66
+        },
+        {
+          "slug": "powx-n",
+          "title": "Pow(x, n)",
+          "difficulty": "Medium",
+          "number": 50
+        },
+        {
+          "slug": "multiply-strings",
+          "title": "Multiply Strings",
+          "difficulty": "Medium",
+          "number": 43
+        },
+        {
+          "slug": "detect-squares",
+          "title": "Detect Squares",
+          "difficulty": "Medium",
+          "number": 2013
+        }
+      ]
+    },
+    {
+      "key": "bit-manipulation",
+      "label": "Bit Manipulation",
+      "prereqs": [
+        "arrays-hashing"
+      ],
+      "problems": [
+        {
+          "slug": "single-number",
+          "title": "Single Number",
+          "difficulty": "Easy",
+          "number": 136
+        },
+        {
+          "slug": "number-of-1-bits",
+          "title": "Number of 1 Bits",
+          "difficulty": "Easy",
+          "number": 191
+        },
+        {
+          "slug": "counting-bits",
+          "title": "Counting Bits",
+          "difficulty": "Easy",
+          "number": 338
+        },
+        {
+          "slug": "reverse-bits",
+          "title": "Reverse Bits",
+          "difficulty": "Easy",
+          "number": 190
+        },
+        {
+          "slug": "missing-number",
+          "title": "Missing Number",
+          "difficulty": "Easy",
+          "number": 268
+        },
+        {
+          "slug": "sum-of-two-integers",
+          "title": "Sum of Two Integers",
+          "difficulty": "Medium",
+          "number": 371
+        },
+        {
+          "slug": "reverse-integer",
+          "title": "Reverse Integer",
+          "difficulty": "Medium",
+          "number": 7
+        }
+      ]
+    }
+  ]
+}

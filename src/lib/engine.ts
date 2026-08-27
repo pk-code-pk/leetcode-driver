@@ -1,0 +1,303 @@
+import { randomUUID } from "crypto";
+import { DateTime } from "luxon";
+import { and, eq, isNull, sql } from "drizzle-orm";
+import { db, schema } from "@/db";
+import { getAuth, getSettings, updateSettings, type Settings } from "./settings";
+import { recentSubmissions, submissionCode, problemUrl, cookieIsValid } from "./leetcode";
+import { inferGrade, schedule, GRADE_LABEL } from "./sm2";
+import { generatePatternNote } from "./hints";
+import { sendMessage, editMessage, esc, type Button } from "./telegram";
+import { pickNext, dueCount, openAttempt } from "./queue";
+
+const ESCALATION_HOURS = [9, 11, 13, 17];
+
+async function log(kind: string, slug?: string, data?: Record<string, unknown>) {
+  await db.insert(schema.events).values({ id: randomUUID(), at: new Date(), kind, slug, data });
+}
+
+const today = (s: Settings) => DateTime.now().setZone(s.timezone).toFormat("yyyy-LL-dd");
+
+function attemptButtons(slug: string, attemptId: string): Button[][] {
+  return [
+    [{ text: "▶︎  Open problem", url: problemUrl(slug) }],
+    [
+      { text: "💡 Stuck", callback_data: `hint:${attemptId}` },
+      { text: "⏭ Skip", callback_data: `skip:${attemptId}` },
+    ],
+  ];
+}
+
+/** Push the next problem and open an attempt against it. */
+export async function serveNext(prefix = ""): Promise<string | null> {
+  const s = await getSettings();
+  if (!s.telegramChatId) return null;
+  if (await openAttempt()) return null; // one problem in flight at a time
+
+  const pick = await pickNext();
+  if (!pick) {
+    await sendMessage(s.telegramChatId, "🎉 Queue empty — nothing due and no unlocked problems left.");
+    return null;
+  }
+
+  const attemptId = randomUUID();
+  await db.insert(schema.attempts).values({
+    id: attemptId,
+    slug: pick.slug,
+    servedAt: new Date(),
+    isReview: pick.isReview,
+  });
+
+  const tag = pick.isReview ? "🔁 Review" : "🆕 New";
+  const body =
+    `${prefix}${tag} · ${esc(pick.difficulty)}\n\n<b>${esc(pick.title)}</b>\n\n` +
+    (pick.isReview ? "You solved this before. Attempt it blind first." : "");
+
+  const msg = await sendMessage(s.telegramChatId, body, { buttons: attemptButtons(pick.slug, attemptId) });
+  if (msg) await db.update(schema.attempts).set({ telegramMessageId: msg.message_id }).where(eq(schema.attempts.id, attemptId));
+
+  await log("served", pick.slug, { isReview: pick.isReview });
+  return attemptId;
+}
+
+/**
+ * Poll LeetCode, close out any attempt that got accepted, infer its grade from
+ * telemetry, and reschedule. This is what removes both the "mark done" tap and
+ * the "how hard was it" tap.
+ */
+export async function syncSolves(): Promise<number> {
+  const s = await getSettings();
+  if (!s.leetcodeUsername) return 0;
+
+  const auth = await getAuth(s);
+  let subs;
+  try {
+    subs = await recentSubmissions(s.leetcodeUsername, 20, auth);
+  } catch (e) {
+    console.error("[sync] leetcode fetch failed:", e);
+    return 0;
+  }
+  await updateSettings({ lastSyncAt: new Date() });
+
+  const attempt = await openAttempt();
+  if (!attempt) return 0;
+
+  const servedSec = Math.floor(attempt.servedAt.getTime() / 1000);
+  const mine = subs.filter((x) => x.titleSlug === attempt.slug && x.timestamp >= servedSec);
+  const accepted = mine.find((x) => x.statusDisplay === "Accepted");
+  if (!accepted) return 0;
+
+  const failed = mine.filter(
+    (x) => x.statusDisplay !== "Accepted" && x.timestamp <= accepted.timestamp,
+  ).length;
+
+  const solvedAt = new Date(accepted.timestamp * 1000);
+  const startedAt = attempt.openedAt ?? attempt.servedAt;
+  const durationSec = Math.max(0, Math.floor((solvedAt.getTime() - startedAt.getTime()) / 1000));
+
+  const [problem] = await db.select().from(schema.problems).where(eq(schema.problems.slug, attempt.slug));
+  const [existing] = await db.select().from(schema.cards).where(eq(schema.cards.slug, attempt.slug));
+
+  const grade = inferGrade({
+    durationSec,
+    failedSubmissions: failed,
+    hintLevel: attempt.hintLevel,
+    difficulty: problem?.difficulty ?? "Medium",
+    isReview: attempt.isReview,
+  });
+
+  const next = schedule(
+    {
+      ease: existing?.ease ?? 2.5,
+      intervalDays: existing?.intervalDays ?? 0,
+      reps: existing?.reps ?? 0,
+      lapses: existing?.lapses ?? 0,
+    },
+    grade,
+    solvedAt,
+  );
+
+  // Best-effort enrichment: your own code plus a one-line pattern note.
+  let code: string | null = null;
+  let lang: string | null = null;
+  let patternNote: string | null = existing?.patternNote ?? null;
+  const detail = await submissionCode(accepted.id, auth);
+  if (detail) {
+    code = detail.code;
+    lang = detail.lang;
+    try {
+      patternNote = (await generatePatternNote(problem?.title ?? attempt.slug, detail.code, detail.lang)) ?? patternNote;
+    } catch (e) {
+      console.error("[sync] pattern note failed:", e);
+    }
+  }
+
+  const card = {
+    slug: attempt.slug,
+    state: next.state,
+    ease: next.ease,
+    intervalDays: next.intervalDays,
+    reps: next.reps,
+    lapses: next.lapses,
+    dueAt: next.dueAt,
+    lastGrade: grade,
+    lastGradeSource: "inferred",
+    lastSolvedAt: solvedAt,
+    lastDurationSec: durationSec,
+    lastFailedSubmissions: failed,
+    lastHintLevel: attempt.hintLevel,
+    ...(code ? { code, lang } : {}),
+    ...(patternNote ? { patternNote } : {}),
+  };
+  await db.insert(schema.cards).values(card).onConflictDoUpdate({ target: schema.cards.slug, set: card });
+  await db.update(schema.attempts)
+    .set({ solvedAt, failedSubmissions: failed })
+    .where(eq(schema.attempts.id, attempt.id));
+
+  const day = today(s);
+  await db.insert(schema.days)
+    .values({ day, targetCount: s.dailyNewTarget, solvedCount: 1 })
+    .onConflictDoUpdate({ target: schema.days.day, set: { solvedCount: sql`${schema.days.solvedCount} + 1` } });
+
+  await notifySolved(
+    s, problem?.title ?? attempt.slug, attempt.slug, grade, durationSec, failed,
+    next.intervalDays, patternNote, problem?.tags ?? [],
+  );
+  await log("solved", attempt.slug, { grade, durationSec, failed, intervalDays: next.intervalDays });
+  return 1;
+}
+
+async function notifySolved(
+  s: Settings, title: string, slug: string, grade: number,
+  durationSec: number, failed: number, intervalDays: number, note: string | null,
+  tags: string[] = [],
+) {
+  if (!s.telegramChatId) return;
+  const mins = Math.round(durationSec / 60);
+  const nextOn = DateTime.now().setZone(s.timezone).plus({ days: intervalDays }).toFormat("LLL d");
+  const text =
+    `✅ <b>${esc(title)}</b>\n\n` +
+    `${mins}m · ${failed} failed submission${failed === 1 ? "" : "s"} · graded <b>${GRADE_LABEL[grade]}</b>\n` +
+    `Next review: <b>${nextOn}</b> (${intervalDays}d)\n` +
+    // Prefer the note about *your* solution; fall back to the canonical tags.
+    (note ? `\n<i>${esc(note)}</i>` : tags.length ? `\n<i>${esc(tags.join(" · "))}</i>` : "");
+  await sendMessage(s.telegramChatId, text, {
+    buttons: [[
+      { text: "Too hard", callback_data: `rate:${slug}:2` },
+      { text: "Too easy", callback_data: `rate:${slug}:5` },
+    ]],
+  });
+}
+
+/** 25 minutes into an unsolved attempt, offer the ladder instead of letting you grind. */
+async function rescueCheck(s: Settings) {
+  const attempt = await openAttempt();
+  if (!attempt || attempt.rescueSentAt || !s.telegramChatId) return;
+  const elapsedMin = (Date.now() - (attempt.openedAt ?? attempt.servedAt).getTime()) / 60000;
+  if (elapsedMin < s.rescueAfterMin) return;
+
+  await db.update(schema.attempts).set({ rescueSentAt: new Date() }).where(eq(schema.attempts.id, attempt.id));
+  await sendMessage(
+    s.telegramChatId,
+    `⏱ ${Math.round(elapsedMin)} minutes on this one.\n\nGrinding past here has poor returns. Take a hint — it costs you a fraction of a grade, not the problem.`,
+    { buttons: [[{ text: "💡 Give me a hint", callback_data: `hint:${attempt.id}` }]] },
+  );
+  await log("rescue_offered", attempt.slug, { elapsedMin });
+}
+
+const TIER_COPY = [
+  (n: number) => `${n} due today. Starting now:`,
+  (n: number) => `Still ${n} due. This is reminder 2.`,
+  (n: number) => `⚠️ ${n} due, nothing done. Debt accrues at midnight.`,
+  (n: number) => `🚨 Last call — ${n} due. Skip and tomorrow's queue grows.`,
+];
+
+/** Escalation ladder: louder each tier, and unmet days compound into debt. */
+async function escalate(s: Settings) {
+  if (!s.telegramChatId || s.paused) return;
+  const now = DateTime.now().setZone(s.timezone);
+  const day = today(s);
+
+  const [row] = await db.select().from(schema.days).where(eq(schema.days.day, day));
+  const target = s.dailyNewTarget + s.debt;
+  if (!row) {
+    await db.insert(schema.days).values({ day, targetCount: target, debtAtStart: s.debt }).onConflictDoNothing();
+  }
+  const solved = row?.solvedCount ?? 0;
+  const tierSent = row?.tierSent ?? 0;
+  if (solved >= target) return;
+
+  const tier = ESCALATION_HOURS.filter((h) => now.hour >= h).length;
+  if (tier === 0 || tier <= tierSent) return;
+
+  const n = Math.max(target - solved, await dueCount());
+  await db.update(schema.days).set({ tierSent: tier }).where(eq(schema.days.day, day));
+  await sendMessage(s.telegramChatId, TIER_COPY[tier - 1](n), { silent: tier === 1 && now.hour < 9 });
+  await serveNext();
+  await log("escalated", undefined, { tier, target, solved });
+}
+
+/** At quiet hours: bank the streak or convert the shortfall into debt. */
+async function closeDay(s: Settings) {
+  const now = DateTime.now().setZone(s.timezone);
+  if (now.hour < s.quietStartHour) return;
+  const day = today(s);
+  const [row] = await db.select().from(schema.days).where(eq(schema.days.day, day));
+  if (!row || row.closed) return;
+
+  const met = row.solvedCount >= row.targetCount;
+  const debt = met ? Math.max(0, s.debt - 1) : s.debt + (row.targetCount - row.solvedCount);
+  const streak = met ? s.streak + 1 : 0;
+
+  await db.update(schema.days).set({ closed: true }).where(eq(schema.days.day, day));
+  await updateSettings({ debt, streak });
+
+  if (s.telegramChatId) {
+    await sendMessage(
+      s.telegramChatId,
+      met
+        ? `🌙 Day closed. ${row.solvedCount}/${row.targetCount} done. Streak: <b>${streak}</b>.`
+        : `🌙 Day closed. ${row.solvedCount}/${row.targetCount}. Streak reset. Debt now <b>${debt}</b> — tomorrow's target is ${s.dailyNewTarget + debt}.`,
+      { silent: true },
+    );
+  }
+  await log("day_closed", undefined, { met, debt, streak });
+}
+
+/** Warn once when the stored cookie stops working. */
+async function cookieCheck(s: Settings) {
+  const auth = await getAuth(s);
+  if (!auth || !s.telegramChatId) return;
+  if (await cookieIsValid(auth)) return;
+  await updateSettings({ sessionCookieEnc: null, csrfTokenEnc: null });
+  await sendMessage(s.telegramChatId, "🔑 LeetCode session expired. Visit leetcode.com once with the userscript installed and it will refresh itself.");
+  await log("cookie_expired");
+}
+
+/** Single cron entry point. Every step is independently guarded. */
+export async function tick() {
+  const s = await getSettings();
+  const now = DateTime.now().setZone(s.timezone);
+  const quiet = now.hour >= s.quietStartHour || now.hour < s.quietEndHour;
+
+  for (const [name, fn] of [
+    ["sync", () => syncSolves()],
+    ["rescue", () => (quiet ? Promise.resolve() : rescueCheck(s))],
+    ["escalate", () => (quiet ? Promise.resolve() : escalate(s))],
+    ["closeDay", () => closeDay(s)],
+  ] as const) {
+    try {
+      await fn();
+    } catch (e) {
+      console.error(`[tick:${name}]`, e);
+    }
+  }
+}
+
+/** Hourly: cheap enough to check the cookie once an hour, not every tick. */
+export async function hourly() {
+  try {
+    await cookieCheck(await getSettings());
+  } catch (e) {
+    console.error("[hourly]", e);
+  }
+}
