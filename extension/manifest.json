@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "LeetCode Driver",
+  "version": "1.0.0",
+  "description": "Every new tab shows the problem you owe, until the day's target is met.",
+  "chrome_url_overrides": { "newtab": "newtab.html" },
+  "options_page": "options.html",
+  "permissions": ["storage"],
+  "optional_host_permissions": ["http://localhost/*", "https://*/*"]
+}

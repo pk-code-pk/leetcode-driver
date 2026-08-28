@@ -130,6 +130,22 @@ nagging to be reliable.
 8. Install `userscript/leetcode-cookie-sync.user.js` in Tampermonkey, edit the two
    constants at the top, and load leetcode.com once.
 
+## Forcing functions
+
+Escalation alone is ignorable, because you own the off switch. Two mechanisms
+make skipping cost something:
+
+**Relentless mode.** Past the last escalation tier the ladder stops climbing and
+starts repeating: a nag every `relentlessEveryMin` (default 10) until the target
+is met. There is no snooze and no dismiss — solving is the only thing that stops it.
+Quiet hours still apply. Turn it off with `relentless = false` in settings.
+
+**New-tab takeover.** `extension/` is a Chromium extension that replaces every new
+tab with the problem you owe. The background colour tracks your debt (verdigris →
+amber → vermilion) and a tally along the top edge shows one block per outstanding
+problem. When the target is met the page goes quiet — the reward is the absence of
+a demand. See `extension/README.md` to install.
+
 ## Surfaces
 
 - **Telegram** — the real interface. Problems, hints, escalation, overrides.

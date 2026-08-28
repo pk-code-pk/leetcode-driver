@@ -1,0 +1,121 @@
+/* Institutional palette. Hue tracks how far behind you are, so the page reports
+   your standing before a single word is read. */
+:root {
+  --ink: #eaf2ec;
+  --muted: #7e9a92;
+  --base: #16302b;
+  --accent: #d9e4dd;
+  --rule: rgba(234, 242, 236, 0.14);
+  --shell: 0 clamp(1.5rem, 7vw, 7rem);
+}
+html[data-state="clear"]    { --base: #0f1a18; --muted: #55665f; --accent: #55665f; }
+html[data-state="due"]      { --base: #16302b; --accent: #d9e4dd; }
+html[data-state="behind"]   { --base: #4a3410; --accent: #e8a33d; --muted: #a8895a; }
+html[data-state="critical"] { --base: #4a1710; --accent: #ef6a52; --muted: #b07a70; }
+html[data-state="error"]    { --base: #1c1c1e; --accent: #e8a33d; --muted: #8a8a8e; }
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--base);
+  color: var(--ink);
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+  transition: background-color 400ms ease;
+}
+
+.mono {
+  font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Signature: the outstanding tally. */
+.tally {
+  display: flex;
+  gap: 3px;
+  height: 6px;
+  padding: 0;
+  flex: 0 0 auto;
+}
+.tally span {
+  flex: 1 1 auto;
+  max-width: 84px;
+  background: var(--accent);
+  opacity: 0.9;
+  animation: rise 260ms ease both;
+}
+.tally.empty { background: var(--rule); height: 1px; }
+@keyframes rise { from { transform: scaleY(0.2); opacity: 0; } }
+
+.sheet {
+  flex: 1 1 auto;
+  padding: var(--shell);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(2rem, 6vh, 4rem);
+  max-width: 78rem;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.meta { display: flex; justify-content: space-between; align-items: baseline; }
+.eyebrow {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.body { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.title {
+  margin: 0;
+  font-size: clamp(2.75rem, 9vw, 7.5rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+  text-wrap: balance;
+  animation: lift 220ms ease both;
+}
+@keyframes lift { from { opacity: 0; transform: translateY(0.4rem); } }
+
+.tags { margin: 0; }
+
+.action {
+  align-self: flex-start;
+  margin-top: 1rem;
+  padding: 0.85rem 1.6rem;
+  background: var(--accent);
+  color: var(--base);
+  text-decoration: none;
+  font-weight: 650;
+  font-size: 1rem;
+  border-radius: 2px;
+  transition: transform 120ms ease, filter 120ms ease;
+}
+.action:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.action:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+.foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  border-top: 1px solid var(--rule);
+  padding-top: 1rem;
+}
+/* Deliberately plain: available, but never the obvious move. */
+.dismiss { color: var(--muted); text-decoration: none; border-bottom: 1px solid transparent; }
+.dismiss:hover { border-bottom-color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

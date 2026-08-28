@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LeetCode Driver — Options</title>
+    <style>
+      body { font-family: ui-sans-serif, -apple-system, system-ui, sans-serif;
+             background: #16302b; color: #eaf2ec; margin: 0; padding: 3rem; }
+      .wrap { max-width: 32rem; margin: 0 auto; display: grid; gap: 1.25rem; }
+      h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+      label { display: grid; gap: 0.4rem; font-size: 0.8rem; letter-spacing: 0.06em;
+              text-transform: uppercase; color: #7e9a92; }
+      input { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.95rem;
+              padding: 0.7rem 0.8rem; border: 1px solid rgba(234,242,236,0.18);
+              background: #1e3e37; color: #eaf2ec; border-radius: 2px; }
+      button { justify-self: start; padding: 0.7rem 1.4rem; border: 0; border-radius: 2px;
+               background: #d9e4dd; color: #16302b; font-weight: 650; font-size: 0.95rem; cursor: pointer; }
+      .note { font-size: 0.8rem; color: #7e9a92; line-height: 1.5; }
+      .ok { color: #9fd3b4; font-size: 0.85rem; min-height: 1.2em; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>LeetCode Driver</h1>
+      <label>Driver URL
+        <input id="url" type="url" placeholder="https://your-app.vercel.app" spellcheck="false" />
+      </label>
+      <label>Driver token
+        <input id="token" type="password" placeholder="DRIVER_TOKEN" spellcheck="false" />
+      </label>
+      <button id="save">Save</button>
+      <p class="ok" id="ok"></p>
+      <p class="note">These are the <code>PUBLIC_URL</code> and <code>DRIVER_TOKEN</code> from your
+        deployment's environment. They're stored in Chrome's synced storage and sent only to that URL.</p>
+    </div>
+    <script src="options.js"></script>
+  </body>
+</html>

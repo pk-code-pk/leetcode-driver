@@ -227,13 +227,29 @@ async function escalate(s: Settings) {
   if (solved >= target) return;
 
   const tier = ESCALATION_HOURS.filter((h) => now.hour >= h).length;
-  if (tier === 0 || tier <= tierSent) return;
-
+  if (tier === 0) return;
   const n = Math.max(target - solved, await dueCount());
-  await db.update(schema.days).set({ tierSent: tier }).where(eq(schema.days.day, day));
-  await sendMessage(s.telegramChatId, TIER_COPY[tier - 1](n), { silent: tier === 1 && now.hour < 9 });
-  await serveNext();
-  await log("escalated", undefined, { tier, target, solved });
+
+  if (tier > tierSent) {
+    await db.update(schema.days).set({ tierSent: tier, lastNagAt: new Date() }).where(eq(schema.days.day, day));
+    await sendMessage(s.telegramChatId, TIER_COPY[tier - 1](n), { silent: tier === 1 && now.hour < 9 });
+    await serveNext();
+    await log("escalated", undefined, { tier, target, solved });
+    return;
+  }
+
+  // Past the last tier the ladder stops climbing, so it starts repeating instead.
+  // There is no snooze: solving is the only thing that stops it.
+  if (!s.relentless || tier < ESCALATION_HOURS.length) return;
+  const lastNag = row?.lastNagAt?.getTime() ?? 0;
+  if (Date.now() - lastNag < s.relentlessEveryMin * 60_000) return;
+
+  await db.update(schema.days).set({ lastNagAt: new Date() }).where(eq(schema.days.day, day));
+  await sendMessage(
+    s.telegramChatId,
+    `🔁 Still ${n} unsolved. I'll keep asking every ${s.relentlessEveryMin} minutes until you do one.`,
+  );
+  await log("relentless", undefined, { n, target, solved });
 }
 
 /** At quiet hours: bank the streak or convert the shortfall into debt. */

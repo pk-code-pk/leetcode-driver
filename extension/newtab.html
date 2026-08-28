@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en" data-state="loading">
+  <head>
+    <meta charset="utf-8" />
+    <title>New Tab</title>
+    <link rel="stylesheet" href="newtab.css" />
+  </head>
+  <body>
+    <!-- One block per outstanding problem. The page's only ornament, and it
+         encodes a real number. -->
+    <div class="tally" id="tally" aria-hidden="true"></div>
+
+    <main class="sheet">
+      <header class="meta">
+        <span class="eyebrow" id="eyebrow">Checking</span>
+        <span class="mono" id="daystamp"></span>
+      </header>
+
+      <section class="body">
+        <h1 class="title" id="title">&nbsp;</h1>
+        <p class="mono tags" id="tags"></p>
+        <a class="action" id="action" href="#" hidden>Solve it</a>
+      </section>
+
+      <footer class="foot mono">
+        <span id="ledger"></span>
+        <a class="dismiss" id="dismiss" href="#" hidden>Not now</a>
+      </footer>
+    </main>
+
+    <script src="newtab.js"></script>
+  </body>
+</html>

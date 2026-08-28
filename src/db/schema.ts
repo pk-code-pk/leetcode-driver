@@ -66,6 +66,7 @@ export const days = pgTable("days", {
   targetCount: integer("target_count").notNull(),
   solvedCount: integer("solved_count").notNull().default(0),
   tierSent: integer("tier_sent").notNull().default(0), // highest escalation tier fired
+  lastNagAt: timestamp("last_nag_at", { withTimezone: true }), // relentless mode
   debtAtStart: integer("debt_at_start").notNull().default(0),
   closed: boolean("closed").notNull().default(false),
 });
@@ -87,6 +88,9 @@ export const settings = pgTable("settings", {
   debt: integer("debt").notNull().default(0),
   streak: integer("streak").notNull().default(0),
   paused: boolean("paused").notNull().default(false),
+  /** After the last tier, re-nag on this interval until the target is met. */
+  relentless: boolean("relentless").notNull().default(true),
+  relentlessEveryMin: integer("relentless_every_min").notNull().default(10),
   lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
 });
 
