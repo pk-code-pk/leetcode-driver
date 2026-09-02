@@ -12,6 +12,10 @@ document.getElementById("save").addEventListener("click", async () => {
     driverUrl: url.value.trim().replace(/\/$/, ""),
     driverToken: token.value.trim(),
   });
-  ok.textContent = "Saved. Open a new tab to check.";
-  setTimeout(() => (ok.textContent = ""), 3000);
+  ok.textContent = "Saved. Syncing LeetCode session\u2026";
+  const res = await chrome.runtime.sendMessage({ type: "sync-now" }).catch(() => null);
+  ok.textContent = res?.ok
+    ? "Saved. Open a new tab to check."
+    : "Saved, but the session sync didn't run \u2014 make sure you're signed in to leetcode.com.";
+  setTimeout(() => (ok.textContent = ""), 6000);
 });

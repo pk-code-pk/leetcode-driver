@@ -18,7 +18,7 @@ This one does neither:
 | Rating difficulty | you judge and tap | inferred from time + failed submissions + hints used |
 | Knowing when to stop grinding | your call | rescue timer at 25 min offers a hint ladder |
 | Ignoring a reminder | it goes away | escalates 4 tiers, then compounds into debt |
-| Session cookie upkeep | re-paste it monthly | userscript refreshes it silently |
+| Session cookie upkeep | re-paste it monthly | the extension refreshes it silently |
 
 ## How grading works
 
@@ -102,7 +102,7 @@ npm run seed                  # ~50s: 150 problems + live tags + official hints
 npm run build && npm start
 ```
 
-Point the userscript's `DRIVER_URL` at `http://localhost:3000`.
+Point the extension's Options at `http://localhost:3000`.
 
 **The catch:** when the machine sleeps, cron stops and reminders don't fire. It
 degrades gracefully — tiers are computed from stored state and the current clock,
@@ -127,8 +127,8 @@ nagging to be reliable.
    from an external pinger instead.
 6. `npm run telegram:register` to point the bot at your deployment.
 7. Message your bot `/start`. That binds it to your chat.
-8. Install `userscript/leetcode-cookie-sync.user.js` in Tampermonkey, edit the two
-   constants at the top, and load leetcode.com once.
+8. Install the browser extension (`extension/`) and set your driver URL + token in
+   its Options. It keeps the LeetCode session fresh and resolves your username.
 
 ## Forcing functions
 

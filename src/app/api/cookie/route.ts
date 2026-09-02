@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { encrypt } from "@/lib/crypto";
 import { updateSettings } from "@/lib/settings";
+import { whoAmI } from "@/lib/leetcode";
 
 export const dynamic = "force-dynamic";
 
@@ -20,13 +21,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "missing session or csrf" }, { status: 400 });
   }
 
+  // Derive the username from the session itself so nothing has to be typed in.
+  const resolved = username ?? (await whoAmI({ session, csrf }));
+
   await updateSettings({
     sessionCookieEnc: encrypt(session),
     csrfTokenEnc: encrypt(csrf),
     cookieUpdatedAt: new Date(),
-    ...(username ? { leetcodeUsername: username } : {}),
+    ...(resolved ? { leetcodeUsername: resolved } : {}),
   });
-  return NextResponse.json({ ok: true }, { headers: cors() });
+  return NextResponse.json({ ok: true, username: resolved }, { headers: cors() });
 }
 
 const cors = () => ({

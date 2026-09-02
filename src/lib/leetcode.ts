@@ -100,6 +100,19 @@ export async function submissionCode(submissionId: string, auth: Auth) {
   }
 }
 
+/** Resolve the signed-in username from a session cookie. */
+export async function whoAmI(auth: Auth): Promise<string | null> {
+  if (!auth) return null;
+  try {
+    const d = await gql<{ userStatus: { username: string | null; isSignedIn: boolean } | null }>(
+      `query { userStatus { username isSignedIn } }`, {}, auth,
+    );
+    return d.userStatus?.isSignedIn ? d.userStatus.username : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Cheap liveness probe for the stored cookie. */
 export async function cookieIsValid(auth: Auth): Promise<boolean> {
   if (!auth) return false;
