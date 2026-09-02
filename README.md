@@ -58,21 +58,47 @@ request-driven, so a serverless host works and there is nothing to spin down.
 |---|---|---|
 | App | Vercel | free |
 | Postgres | Supabase | free |
-| Cron (every 5 min) | cron-job.org -> `GET /api/cron` | free |
+| Cron (every 5 min) | GitHub Actions (`.github/workflows/tick.yml`) | free |
 | Telegram | webhook (Telegram calls you) | free |
 
-1. Supabase -> new project -> copy the connection string (use the **session pooler**
-   URI; serverless opens many short-lived connections).
-2. Import the repo on Vercel. Set env vars: `DATABASE_URL`, `SECRET_KEY`,
-   `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `DRIVER_TOKEN`, `PUBLIC_URL`
-   (your vercel.app URL), and `DISABLE_CRON=1`.
-3. Locally, with the same `DATABASE_URL`: `npm run db:push && npm run seed`.
-4. `npm run telegram:register` to point the bot at the deployment.
-5. cron-job.org -> new job -> `https://<you>.vercel.app/api/cron`, every 5 minutes,
-   with header `Authorization: Bearer <DRIVER_TOKEN>`.
+Each person runs their **own** instance — own bot, own database, own deployment.
+This is single-tenant by design: `settings` is one row, and `cards` / `attempts` /
+`days` have no user column.
+
+1. **Bot** — message [@BotFather](https://t.me/BotFather), `/newbot`, keep the token.
+2. **Database** — Supabase -> new project -> Connect -> copy the **session pooler**
+   URI (port 5432; `drizzle-kit push` needs session mode).
+3. **Secrets** — `cp .env.example .env`, then fill it in. Generate the three
+   you invent yourself:
+   ```bash
+   node -e "for (const k of ['SECRET_KEY','TELEGRAM_WEBHOOK_SECRET','DRIVER_TOKEN']) \
+     console.log(k + '=' + require('crypto').randomBytes(24).toString('base64url'))"
+   ```
+4. **Schema + data** — `npm run db:push && npm run seed` (~50s: 150 problems with
+   live tags and official hints).
+5. **Deploy** — `npx vercel link` then `npx vercel deploy --prod`, and set the same
+   vars in the Vercel project plus `DISABLE_CRON=1` and `PUBLIC_URL=https://<you>.vercel.app`:
+   ```bash
+   printf '%s' "$DRIVER_TOKEN" | npx vercel env add DRIVER_TOKEN production
+   ```
+6. **Webhook** — `npm run telegram:register`, then `/start` the bot from your phone.
+   The first chat to message it binds the instance; everyone else is refused.
+7. **Cron** — in your fork's GitHub settings add secret `DRIVER_TOKEN` and variable
+   `DRIVER_URL` (your vercel.app URL). `.github/workflows/tick.yml` then ticks every
+   5 minutes:
+   ```bash
+   gh secret set DRIVER_TOKEN --body "$DRIVER_TOKEN"
+   gh variable set DRIVER_URL --body "https://<you>.vercel.app"
+   ```
+8. **Extension** — load `extension/` unpacked (see `extension/README.md`) and set
+   your URL + `DRIVER_TOKEN` in its Options. This is what captures the LeetCode
+   session and resolves your username.
 
 `DISABLE_CRON=1` matters: serverless functions are frozen between requests, so an
-in-process scheduler would never fire. The external pinger is what drives the clock.
+in-process scheduler would never fire. The external tick is what drives the clock.
+GitHub's scheduled runs can lag a few minutes under load and are **disabled after
+60 days without repo activity** — [cron-job.org](https://cron-job.org) is the more
+punctual alternative if that bites.
 
 Paid hosts (Railway ~$5/mo, Fly ~$2/mo) only buy you a long-lived process, which
 this design doesn't need. Render's free tier is the trap — it sleeps, and a sleeping
