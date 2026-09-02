@@ -1,0 +1,21 @@
+name: tick
+
+# Drives the scheduler. Vercel functions are frozen between requests, so the
+# clock has to come from outside — this is that clock.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Hit /api/cron
+        run: |
+          code=$(curl -sS -o /tmp/out -w '%{http_code}' --max-time 90 \
+            -H "Authorization: Bearer ${{ secrets.DRIVER_TOKEN }}" \
+            "${{ vars.DRIVER_URL }}/api/cron")
+          echo "HTTP $code"; cat /tmp/out; echo
+          test "$code" = "200"
