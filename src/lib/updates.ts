@@ -24,8 +24,14 @@ export async function handleUpdate(update: Update) {
 
 async function onCallback(cb: NonNullable<Update["callback_query"]>) {
   const s = await getSettings();
+  const from = String(cb.message?.chat.id ?? "");
+  // Bot usernames are searchable, so anyone could otherwise drive this instance.
+  if (s.telegramChatId && from && from !== s.telegramChatId) {
+    await answerCallback(cb.id, "Not your driver.");
+    return;
+  }
   const [action, ...rest] = (cb.data ?? "").split(":");
-  const chatId = s.telegramChatId ?? String(cb.message?.chat.id ?? "");
+  const chatId = s.telegramChatId ?? from;
 
   if (action === "hint") {
     const [attemptId] = rest;
@@ -90,8 +96,13 @@ async function onMessage(msg: NonNullable<Update["message"]>) {
   const text = (msg.text ?? "").trim().toLowerCase();
   const s = await getSettings();
 
-  // First contact binds the bot to this chat.
-  if (!s.telegramChatId) await updateSettings({ telegramChatId: chatId });
+  // First contact binds the bot to this chat; everyone after that is a stranger.
+  if (!s.telegramChatId) {
+    await updateSettings({ telegramChatId: chatId });
+  } else if (chatId !== s.telegramChatId) {
+    await sendMessage(chatId, "This driver is already bound to someone else.");
+    return;
+  }
 
   if (text.startsWith("/start")) {
     await sendMessage(chatId, "Connected. I'll push problems on schedule.\n\n/next — serve one now\n/status — where you stand\n/pause · /resume");
