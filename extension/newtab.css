@@ -38,14 +38,15 @@ body {
 /* Signature: the outstanding tally. */
 .tally {
   display: flex;
-  gap: 3px;
-  height: 6px;
-  padding: 0;
+  gap: 2px;
+  height: 8px;
   flex: 0 0 auto;
 }
+/* Segments divide the full width, so the bar always spans the screen and the
+   count reads as density rather than a stub in the corner. */
 .tally span {
-  flex: 1 1 auto;
-  max-width: 84px;
+  flex: 1 1 0;
+  min-width: 0;
   background: var(--accent);
   opacity: 0.9;
   animation: rise 260ms ease both;
