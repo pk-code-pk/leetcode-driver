@@ -21,7 +21,14 @@ export type Telemetry = {
   isReview: boolean;
 };
 
-const MAX_INTERVAL_DAYS = 180;
+/**
+ * Ceiling on how far out a review can be pushed.
+ *
+ * Open-ended retention wants ~180 days, but when you are prepping toward a date
+ * a problem parked past it never resurfaces before it matters. Set
+ * MAX_INTERVAL_DAYS to roughly a third of the time you have left.
+ */
+const MAX_INTERVAL_DAYS = Number(process.env.MAX_INTERVAL_DAYS) || 21;
 
 /** Minutes a clean first solve is expected to take. */
 export const BASELINE_MIN: Record<string, number> = { Easy: 12, Medium: 25, Hard: 45 };
