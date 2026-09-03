@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 
 /** Override if you want a cheaper or newer model; verified at call time. */
-const MODEL = process.env.OPENAI_MODEL || "gpt-5.6-luna";
+const MODEL = process.env.OPENAI_MODEL || "gpt-5.6-terra";
 
 /** Optional feature. Without a key the app runs fine, minus generated hints. */
 export const hintsAvailable = () => Boolean(process.env.OPENAI_API_KEY);
@@ -132,6 +132,7 @@ export async function gradeFromNotes(
   difficulty: string,
   durationSec: number | null,
   code?: string | null,
+  telemetry?: { failedSubmissions?: number; hintLevel?: number },
 ): Promise<{ grade: number; summary: string } | null> {
   if (!hintsAvailable()) return null;
   const mins = durationSec ? Math.round(durationSec / 60) : null;
@@ -141,9 +142,20 @@ export async function gradeFromNotes(
         "Scale: 5 = instant and certain; 4 = solid, minor friction; 3 = got it but slow or shaky; " +
         "2 = heavy struggle, nearly stuck; 1 = needed major help; 0 = did not really solve it.\n" +
         "Weigh the writer's description of struggle far more than elapsed time.\n" +
+        "Solving quickly after being given the key idea is not fluency: grade what it " +
+        "took them to FIND the approach, not how fast they wrote it once they had it. " +
+        "A hint from any source — a friend, a video, an editorial, a search — counts " +
+        "as help even when the app recorded no hint.\n" +
+        "Failed attempts are a weak signal: the count cannot distinguish a wrong " +
+        "submission from running the code against sample tests, so treat it as " +
+        "corroboration of what they wrote, never as evidence against it.\n" +
         'Reply as strict JSON only: {"grade": <0-5 integer>, "summary": "<max 15 words>"}',
       `Problem: ${title} (${difficulty})\n` +
         (mins != null ? `Time: ${mins} min\n` : "") +
+        (telemetry?.failedSubmissions
+          ? `Failed attempts (may include test runs): ${telemetry.failedSubmissions}\n`
+          : "") +
+        (telemetry?.hintLevel ? `In-app hints used: ${telemetry.hintLevel} of 4\n` : "") +
         `\nTheir notes:\n${notes.slice(0, 4000)}` +
         (code ? `\n\nTheir accepted solution:\n\`\`\`\n${code.slice(0, 4000)}\n\`\`\`` : ""),
       600,

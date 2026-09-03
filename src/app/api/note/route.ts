@@ -53,6 +53,10 @@ export async function POST(req: Request) {
     problem?.difficulty ?? "Medium",
     card.lastDurationSec,
     card.code,
+    {
+      failedSubmissions: card.lastFailedSubmissions ?? undefined,
+      hintLevel: card.lastHintLevel ?? undefined,
+    },
   );
   // No key or a bad response: the note is still saved, the grade just stands.
   if (!judged) {

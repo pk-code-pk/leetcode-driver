@@ -167,10 +167,17 @@ export async function syncSolves(): Promise<number> {
     .set({ solvedAt, failedSubmissions: failed })
     .where(eq(schema.attempts.id, attempt.id));
 
+  // Resubmitting a problem you already finished today is not a second problem.
   const day = today(s);
+  const alreadyToday =
+    existing?.lastSolvedAt != null &&
+    DateTime.fromJSDate(existing.lastSolvedAt).setZone(s.timezone).toFormat("yyyy-LL-dd") === day;
   await db.insert(schema.days)
-    .values({ day, targetCount: s.dailyNewTarget, solvedCount: 1 })
-    .onConflictDoUpdate({ target: schema.days.day, set: { solvedCount: sql`${schema.days.solvedCount} + 1` } });
+    .values({ day, targetCount: s.dailyNewTarget, solvedCount: alreadyToday ? 0 : 1 })
+    .onConflictDoUpdate({
+      target: schema.days.day,
+      set: { solvedCount: alreadyToday ? sql`${schema.days.solvedCount}` : sql`${schema.days.solvedCount} + 1` },
+    });
 
   await notifySolved(
     s, problem?.title ?? attempt.slug, attempt.slug, grade, durationSec, failed,
@@ -286,10 +293,17 @@ export async function manualSolve(opts: {
   await db.insert(schema.cards).values(card).onConflictDoUpdate({ target: schema.cards.slug, set: card });
   await db.update(schema.attempts).set({ solvedAt, failedSubmissions: failed }).where(eq(schema.attempts.id, attempt.id));
 
+  // Resubmitting a problem you already finished today is not a second problem.
   const day = today(s);
+  const alreadyToday =
+    existing?.lastSolvedAt != null &&
+    DateTime.fromJSDate(existing.lastSolvedAt).setZone(s.timezone).toFormat("yyyy-LL-dd") === day;
   await db.insert(schema.days)
-    .values({ day, targetCount: s.dailyNewTarget, solvedCount: 1 })
-    .onConflictDoUpdate({ target: schema.days.day, set: { solvedCount: sql`${schema.days.solvedCount} + 1` } });
+    .values({ day, targetCount: s.dailyNewTarget, solvedCount: alreadyToday ? 0 : 1 })
+    .onConflictDoUpdate({
+      target: schema.days.day,
+      set: { solvedCount: alreadyToday ? sql`${schema.days.solvedCount}` : sql`${schema.days.solvedCount} + 1` },
+    });
 
   await notifySolved(
     s, problem?.title ?? attempt.slug, attempt.slug, grade, durationSec, failed,
