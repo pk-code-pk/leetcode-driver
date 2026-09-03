@@ -287,13 +287,16 @@ export async function manualSolve(opts: {
     lastGrade: keepGrade ? existing.lastGrade : grade,
     lastGradeSource: keepGrade ? existing.lastGradeSource : (opts.source ?? "manual"),
     lastSolvedAt: solvedAt,
-    lastDurationSec: durationSec,
-    lastFailedSubmissions: failed,
-    lastHintLevel: attempt.hintLevel,
-    preEase: existing?.ease ?? 2.5,
-    preIntervalDays: existing?.intervalDays ?? 0,
-    preReps: existing?.reps ?? 0,
-    preLapses: existing?.lapses ?? 0,
+    // Telemetry is what the note grader reads, so a signal-free resubmit must
+    // not blank it — and the snapshot must not advance, or a later regrade
+    // replays from the wrong base.
+    lastDurationSec: keepGrade ? existing.lastDurationSec : durationSec,
+    lastFailedSubmissions: keepGrade ? existing.lastFailedSubmissions : failed,
+    lastHintLevel: keepGrade ? existing.lastHintLevel : attempt.hintLevel,
+    preEase: keepGrade ? existing.preEase : (existing?.ease ?? 2.5),
+    preIntervalDays: keepGrade ? existing.preIntervalDays : (existing?.intervalDays ?? 0),
+    preReps: keepGrade ? existing.preReps : (existing?.reps ?? 0),
+    preLapses: keepGrade ? existing.preLapses : (existing?.lapses ?? 0),
     ...(opts.code ? { code: opts.code, lang: opts.lang ?? null } : {}),
     ...(patternNote ? { patternNote } : {}),
   };

@@ -356,7 +356,8 @@
    */
   function askForNotes(slug, title) {
     const box = document.createElement("div");
-    box.style.cssText = "position:fixed;left:18px;bottom:18px;z-index:2147483647";
+    // Sits above the timer panel, which now stays put through a solve.
+    box.style.cssText = "position:fixed;left:18px;bottom:150px;z-index:2147483647";
     const sr = box.attachShadow({ mode: "open" });
     sr.innerHTML = `
       <style>
@@ -399,12 +400,13 @@
     const ok = sr.querySelector(".ok");
     ta.focus();
 
-    sr.querySelector('[data-a="skip"]').addEventListener("click", () => box.remove());
+    const done = () => { box.remove(); void refresh(); };
+    sr.querySelector('[data-a="skip"]').addEventListener("click", done);
     sr.querySelector('[data-a="save"]').addEventListener("click", async () => {
       const notes = ta.value.trim();
-      if (!notes) return box.remove();
+      if (!notes) return done();
       const c = await creds();
-      if (!c) return box.remove();
+      if (!c) return done();
       ok.hidden = false;
       ok.textContent = "Grading\u2026";
       try {
@@ -436,13 +438,13 @@
         }
         ok.textContent += " \u2014 nothing left due.";
       } catch {}
-      setTimeout(() => box.remove(), 2600);
+      setTimeout(done, 2600);
     });
   }
 
   window.addEventListener("__ld_solved", (e) => {
-    if (host) { host.remove(); host = null; }
-    askForNotes(e.detail?.slug);
+    askForNotes(e.detail?.slug, e.detail?.title);
+    void refresh();
   });
 
   chrome.runtime.onMessage.addListener((msg) => {
@@ -453,6 +455,10 @@
     host.classList.remove("collapsed");
     try { localStorage.removeItem(COLLAPSE_KEY); } catch {}
     void refresh();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) void refresh();
   });
 
   refresh();
