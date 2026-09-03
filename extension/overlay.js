@@ -9,7 +9,7 @@
   const HIDE_KEY = "__ld_timer_hidden";
   const HOST_NAME = location.hostname.includes("neetcode") ? "neetcode" : "leetcode";
   let state = null;      // payload from /api/attempt
-  let localPausedAt = null;
+  let offline = false;
   let host, root, els;
 
   const fmt = (s) => {
@@ -28,28 +28,37 @@
     return driverUrl && driverToken ? { url: driverUrl.replace(/\/$/, ""), token: driverToken } : null;
   }
 
+  /**
+   * A failed request and "nothing in flight" are different answers, and
+   * conflating them wipes a running timer the moment the laptop wakes before
+   * the network does.
+   */
   async function fetchAttempt() {
     const c = await creds();
-    if (!c) return null;
+    if (!c) return { ok: false };
     try {
       const r = await fetch(`${c.url}/api/attempt`, { headers: { "x-driver-token": c.token } });
-      if (!r.ok) return null;
-      return (await r.json()).attempt;
+      if (!r.ok) return { ok: false };
+      return { ok: true, attempt: (await r.json()).attempt };
     } catch {
-      return null;
+      return { ok: false };
     }
   }
 
+  /** Returns whether the server actually accepted it. */
   async function send(action) {
     const c = await creds();
-    if (!c) return;
+    if (!c) return false;
     try {
-      await fetch(`${c.url}/api/timer`, {
+      const r = await fetch(`${c.url}/api/timer`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-driver-token": c.token },
         body: JSON.stringify({ action }),
       });
-    } catch {}
+      return r.ok;
+    } catch {
+      return false;
+    }
   }
 
   function build() {
@@ -118,18 +127,45 @@
     };
 
     els.pause.addEventListener("click", async () => {
-      const pausing = !localPausedAt;
-      localPausedAt = pausing ? Date.now() : null;
-      if (!pausing && state) state.pausedSec += Math.floor((Date.now() - state.__pauseStart) / 1000);
-      if (pausing && state) state.__pauseStart = Date.now();
-      await send(pausing ? "pause" : "resume");
+      if (!state) return;
+      const pausing = !state.pausedAt;
+      const before = { pausedAt: state.pausedAt, pausedSec: state.pausedSec };
+
+      // Optimistic, then reverted if the server never heard it — a pause that
+      // silently fails counts the break as working time and sinks the grade.
+      if (pausing) {
+        state.pausedAt = new Date().toISOString();
+      } else {
+        state.pausedSec += Math.floor((Date.now() - new Date(state.pausedAt).getTime()) / 1000);
+        state.pausedAt = null;
+      }
+      render();
+
+      if (!(await send(pausing ? "pause" : "resume"))) {
+        state.pausedAt = before.pausedAt;
+        state.pausedSec = before.pausedSec;
+        offline = true;
+        render();
+        return;
+      }
+      offline = false;
       render();
     });
 
     els.reset.addEventListener("click", async () => {
-      if (state) { state.startedAt = new Date().toISOString(); state.pausedSec = 0; }
-      localPausedAt = null;
-      await send("reset");
+      if (!state) return;
+      const before = { startedAt: state.startedAt, pausedSec: state.pausedSec, pausedAt: state.pausedAt };
+      state.startedAt = new Date().toISOString();
+      state.pausedSec = 0;
+      state.pausedAt = null;
+      render();
+
+      if (!(await send("reset"))) {
+        Object.assign(state, before);
+        offline = true;
+      } else {
+        offline = false;
+      }
       render();
     });
 
@@ -222,7 +258,9 @@
     els.reset.hidden = false;
     els.next.textContent = "Next \u203a";
     const started = new Date(state.startedAt).getTime();
-    const pausedNow = localPausedAt ? Math.floor((Date.now() - state.__pauseStart) / 1000) : 0;
+    const pausedNow = state.pausedAt
+      ? Math.floor((Date.now() - new Date(state.pausedAt).getTime()) / 1000)
+      : 0;
     const sec = Math.max(0, Math.floor((Date.now() - started) / 1000) - state.pausedSec - pausedNow);
 
     els.title.textContent = state.title;
@@ -231,23 +269,22 @@
       (state.hintLevel ? ` · ${state.hintLevel} hint${state.hintLevel > 1 ? "s" : ""}` : "");
 
     const ratio = sec / 60 / state.baselineMin;
-    els.t.className = "t" + (localPausedAt ? " paused" : ratio > 2 ? " way" : ratio > 1 ? " over" : "");
+    els.t.className = "t" + (state.pausedAt ? " paused" : ratio > 2 ? " way" : ratio > 1 ? " over" : "");
     els.t.textContent = fmt(sec);
-    els.pause.textContent = localPausedAt ? "Resume" : "Pause";
+    els.pause.textContent = state.pausedAt ? "Resume" : "Pause";
+    if (offline) els.meta.textContent += " · offline";
   }
 
   async function refresh() {
-    const a = await fetchAttempt();
-    if (!a) {
-      state = null;
-      if (!host && !sessionStorage.getItem(HIDE_KEY)) build();
+    const res = await fetchAttempt();
+    if (!res.ok) {
+      // Unreachable: keep showing whatever we had rather than blanking it.
+      offline = true;
       render();
       return;
     }
-    const keepPause = state?.__pauseStart;
-    state = a;
-    state.__pauseStart = keepPause ?? (a.pausedAt ? new Date(a.pausedAt).getTime() : null);
-    localPausedAt = a.pausedAt ? new Date(a.pausedAt).getTime() : localPausedAt;
+    offline = false;
+    state = res.attempt;
     if (!host && !sessionStorage.getItem(HIDE_KEY)) build();
     render();
   }
