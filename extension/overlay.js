@@ -322,6 +322,22 @@
       } catch {
         ok.textContent = "Saved locally \u2014 send failed.";
       }
+
+      // Straight into the next problem: the pause between one solve and the
+      // next is where a session dies.
+      try {
+        const r = await fetch(`${c.url}/api/serve`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-driver-token": c.token },
+        });
+        const j = await r.json();
+        if (j.url) {
+          ok.textContent += " \u2014 next up\u2026";
+          setTimeout(() => { window.location.href = j.url; }, 1600);
+          return;
+        }
+        ok.textContent += " \u2014 nothing left due.";
+      } catch {}
       setTimeout(() => box.remove(), 2600);
     });
   }
