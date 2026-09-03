@@ -14,28 +14,32 @@ const stamp = (d: Date, zone: string, fmt = "MM-dd HH:mm") =>
 
 /** Read-only. The bot is the interface; this is just the look-back. */
 export default async function Home() {
-  const [s, due, totals, byTopic, recent] = await Promise.all([
-    getSettings(),
-    dueCount(),
-    db
-      .select({
-        solved: sql<number>`count(*)::int`,
-        avgEase: sql<number>`coalesce(avg(${schema.cards.ease}), 0)::float`,
-        lapses: sql<number>`coalesce(sum(${schema.cards.lapses}), 0)::int`,
-      })
-      .from(schema.cards),
-    db
-      .select({
-        topic: schema.problems.topic,
-        total: sql<number>`count(*)::int`,
-        done: sql<number>`count(${schema.cards.slug})::int`,
-      })
-      .from(schema.problems)
-      .leftJoin(schema.cards, sql`${schema.cards.slug} = ${schema.problems.slug}`)
-      .groupBy(schema.problems.topic, schema.problems.topicOrder)
-      .orderBy(schema.problems.topicOrder),
-    db.select().from(schema.events).orderBy(desc(schema.events.at)).limit(12),
-  ]);
+  // Sequential on purpose: through a transaction-mode pooler, firing these
+  // concurrently over a small pool stalls until the function times out.
+  const s = await getSettings();
+  const due = await dueCount();
+  const totals = await db
+    .select({
+      solved: sql<number>`count(*)::int`,
+      avgEase: sql<number>`coalesce(avg(${schema.cards.ease}), 0)::float`,
+      lapses: sql<number>`coalesce(sum(${schema.cards.lapses}), 0)::int`,
+    })
+    .from(schema.cards);
+  const byTopic = await db
+    .select({
+      topic: schema.problems.topic,
+      total: sql<number>`count(*)::int`,
+      done: sql<number>`count(${schema.cards.slug})::int`,
+    })
+    .from(schema.problems)
+    .leftJoin(schema.cards, sql`${schema.cards.slug} = ${schema.problems.slug}`)
+    .groupBy(schema.problems.topic, schema.problems.topicOrder)
+    .orderBy(schema.problems.topicOrder);
+  const recent = await db
+    .select()
+    .from(schema.events)
+    .orderBy(desc(schema.events.at))
+    .limit(12);
 
   const t = totals[0] ?? { solved: 0, avgEase: 0, lapses: 0 };
 

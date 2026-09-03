@@ -15,7 +15,11 @@ function getDb(): PostgresJsDatabase<typeof schema> {
   if (g.__db) return g.__db;
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set");
-  const client = g.__pg ?? postgres(url, { max: 5, prepare: false });
+  // Serverless fans out across many short-lived instances, so each one holds a
+  // single connection; five apiece exhausts a pooler in minutes.
+  const client =
+    g.__pg ??
+    postgres(url, { max: 3, prepare: false, idle_timeout: 20, connect_timeout: 10 });
   g.__pg = client;
   g.__db = drizzle(client, { schema });
   return g.__db;
