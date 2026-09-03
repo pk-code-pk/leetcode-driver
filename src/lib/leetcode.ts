@@ -126,4 +126,25 @@ export async function cookieIsValid(auth: Auth): Promise<boolean> {
   }
 }
 
-export const problemUrl = (slug: string) => `https://leetcode.com/problems/${slug}/`;
+/**
+ * Six of the NeetCode 150 are LeetCode Premium. NeetCode hosts free equivalents
+ * under its own renamed slugs, so those route there instead of to a paywall.
+ *
+ * LeetCode never sees a submission for these, so solve detection can't fire —
+ * they are closed with /solved instead.
+ */
+export const PREMIUM_ON_NEETCODE: Record<string, string> = {
+  "encode-and-decode-strings": "string-encode-and-decode",
+  "number-of-connected-components-in-an-undirected-graph": "count-connected-components",
+  "graph-valid-tree": "valid-tree",
+  "alien-dictionary": "foreign-dictionary",
+  "meeting-rooms": "meeting-schedule",
+  "meeting-rooms-ii": "meeting-schedule-ii",
+};
+
+export const isPremium = (slug: string) => slug in PREMIUM_ON_NEETCODE;
+
+export const problemUrl = (slug: string) =>
+  isPremium(slug)
+    ? `https://neetcode.io/problems/${PREMIUM_ON_NEETCODE[slug]}`
+    : `https://leetcode.com/problems/${slug}/`;

@@ -3,7 +3,7 @@ import { DateTime } from "luxon";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getAuth, getSettings, updateSettings, type Settings } from "./settings";
-import { recentSubmissions, submissionCode, problemUrl, cookieIsValid } from "./leetcode";
+import { recentSubmissions, submissionCode, problemUrl, cookieIsValid, isPremium } from "./leetcode";
 import { inferGrade, schedule, GRADE_LABEL } from "./sm2";
 import { generatePatternNote } from "./hints";
 import { sendMessage, editMessage, esc, type Button } from "./telegram";
@@ -164,6 +164,96 @@ export async function syncSolves(): Promise<number> {
   );
   await log("solved", attempt.slug, { grade, durationSec, failed, intervalDays: next.intervalDays });
   return 1;
+}
+
+/**
+ * Close the open attempt by hand.
+ *
+ * The six Premium problems live on NeetCode, where LeetCode never sees a
+ * submission — without this they could never be completed. Grade is inferred
+ * from time and hints, with no failed-submission signal available.
+ */
+export async function manualSolve(opts: {
+  failedSubmissions?: number;
+  code?: string | null;
+  lang?: string | null;
+  source?: string;
+  expectSlug?: string;
+} = {}): Promise<string | null> {
+  const s = await getSettings();
+  const attempt = await openAttempt();
+  if (!attempt) return null;
+  // A report from a page the driver didn't serve is ignored.
+  if (opts.expectSlug && opts.expectSlug !== attempt.slug) return null;
+  const failed = Math.max(0, opts.failedSubmissions ?? 0);
+
+  const solvedAt = new Date();
+  const startedAt = attempt.openedAt ?? attempt.servedAt;
+  const durationSec = Math.max(0, Math.floor((solvedAt.getTime() - startedAt.getTime()) / 1000));
+
+  const [problem] = await db.select().from(schema.problems).where(eq(schema.problems.slug, attempt.slug));
+  const [existing] = await db.select().from(schema.cards).where(eq(schema.cards.slug, attempt.slug));
+
+  const grade = inferGrade({
+    durationSec,
+    failedSubmissions: failed,
+    hintLevel: attempt.hintLevel,
+    difficulty: problem?.difficulty ?? "Medium",
+    isReview: attempt.isReview,
+  });
+
+  const next = schedule(
+    {
+      ease: existing?.ease ?? 2.5,
+      intervalDays: existing?.intervalDays ?? 0,
+      reps: existing?.reps ?? 0,
+      lapses: existing?.lapses ?? 0,
+    },
+    grade,
+    solvedAt,
+  );
+
+  let patternNote: string | null = existing?.patternNote ?? null;
+  if (opts.code) {
+    try {
+      patternNote =
+        (await generatePatternNote(problem?.title ?? attempt.slug, opts.code, opts.lang ?? "")) ?? patternNote;
+    } catch (e) {
+      console.error("[solve] pattern note failed:", e);
+    }
+  }
+
+  const card = {
+    slug: attempt.slug,
+    state: next.state,
+    ease: next.ease,
+    intervalDays: next.intervalDays,
+    reps: next.reps,
+    lapses: next.lapses,
+    dueAt: next.dueAt,
+    lastGrade: grade,
+    lastGradeSource: opts.source ?? "manual",
+    lastSolvedAt: solvedAt,
+    lastDurationSec: durationSec,
+    lastFailedSubmissions: failed,
+    lastHintLevel: attempt.hintLevel,
+    ...(opts.code ? { code: opts.code, lang: opts.lang ?? null } : {}),
+    ...(patternNote ? { patternNote } : {}),
+  };
+  await db.insert(schema.cards).values(card).onConflictDoUpdate({ target: schema.cards.slug, set: card });
+  await db.update(schema.attempts).set({ solvedAt, failedSubmissions: failed }).where(eq(schema.attempts.id, attempt.id));
+
+  const day = today(s);
+  await db.insert(schema.days)
+    .values({ day, targetCount: s.dailyNewTarget, solvedCount: 1 })
+    .onConflictDoUpdate({ target: schema.days.day, set: { solvedCount: sql`${schema.days.solvedCount} + 1` } });
+
+  await notifySolved(
+    s, problem?.title ?? attempt.slug, attempt.slug, grade, durationSec, failed,
+    next.intervalDays, patternNote, problem?.tags ?? [],
+  );
+  await log("solved", attempt.slug, { grade, durationSec, failed, source: opts.source ?? "manual" });
+  return problem?.title ?? attempt.slug;
 }
 
 async function notifySolved(
