@@ -43,6 +43,13 @@ export const cards = pgTable("cards", {
   code: text("code"),                 // your most recent accepted solution
   lang: text("lang"),
   patternNote: text("pattern_note"),  // one-line auto-generated summary
+  /** Your own account of the attempt, typed on the page after solving. */
+  userNote: text("user_note"),
+  /** Scheduling state *before* the last solve, so a regrade can replay cleanly. */
+  preEase: real("pre_ease"),
+  preIntervalDays: integer("pre_interval_days"),
+  preReps: integer("pre_reps"),
+  preLapses: integer("pre_lapses"),
 }, (t) => [index("cards_due_idx").on(t.dueAt)]);
 
 /** An attempt that is currently in flight: served, not yet accepted. */
@@ -54,6 +61,10 @@ export const attempts = pgTable("attempts", {
   solvedAt: timestamp("solved_at", { withTimezone: true }),
   failedSubmissions: integer("failed_submissions").notNull().default(0),
   hintLevel: integer("hint_level").notNull().default(0),
+  /** Wall-clock the timer spent paused, so duration reflects real work. */
+  pausedSec: integer("paused_sec").notNull().default(0),
+  /** Set while the timer is paused; null when running. */
+  pausedAt: timestamp("paused_at", { withTimezone: true }),
   rescueSentAt: timestamp("rescue_sent_at", { withTimezone: true }),
   abandoned: boolean("abandoned").notNull().default(false),
   isReview: boolean("is_review").notNull().default(false),

@@ -1,14 +1,28 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 
-const MODEL = "claude-opus-5";
+/** Override if you want a cheaper or newer model; verified at call time. */
+const MODEL = process.env.OPENAI_MODEL || "gpt-5.6-luna";
 
 /** Optional feature. Without a key the app runs fine, minus generated hints. */
-export const hintsAvailable = () => Boolean(process.env.ANTHROPIC_API_KEY);
+export const hintsAvailable = () => Boolean(process.env.OPENAI_API_KEY);
 
-let cached: Anthropic | null = null;
-function client(): Anthropic {
-  if (!cached) cached = new Anthropic();
+let cached: OpenAI | null = null;
+function client(): OpenAI {
+  if (!cached) cached = new OpenAI();
   return cached;
+}
+
+/** One place to issue a completion, so every caller shares the same shape. */
+async function complete(system: string, user: string, maxTokens: number): Promise<string> {
+  const r = await client().chat.completions.create({
+    model: MODEL,
+    max_completion_tokens: maxTokens,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+  });
+  return (r.choices[0]?.message?.content ?? "").trim();
 }
 
 /**
@@ -21,14 +35,6 @@ const LADDER: Record<number, string> = {
   3: "Outline the approach in 3-5 bullets: data structure, invariant, and how the loop advances. No code.",
   4: "Give language-agnostic pseudocode plus the time and space complexity. Real compilable code is forbidden.",
 };
-
-function textOf(content: Anthropic.ContentBlock[]): string {
-  return content
-    .filter((b): b is Anthropic.TextBlock => b.type === "text")
-    .map((b) => b.text)
-    .join("\n")
-    .trim();
-}
 
 export type Hint = { text: string; source: "official" | "generated" | "tags" | "link"; html?: boolean };
 
@@ -75,23 +81,14 @@ export async function generateHint(title: string, slug: string, level: number): 
   if (!hintsAvailable()) return null;
   const instruction = LADDER[Math.min(4, Math.max(1, level))];
   try {
-    const response = await client().messages.create({
-      model: MODEL,
-      max_tokens: 16000,
-      thinking: { type: "adaptive" },
-      output_config: { effort: "medium" },
-      system:
-        "You are a LeetCode coach helping someone who is stuck mid-attempt. " +
+    const text = await complete(
+      "You are a LeetCode coach helping someone who is stuck mid-attempt. " +
         "Escalate hints slowly. Never reveal a full working solution, even if asked. " +
         "Be terse — this is read on a phone lock screen.",
-      messages: [
-        {
-          role: "user",
-          content: `Problem: "${title}" (leetcode.com/problems/${slug}/)\n\nHint level ${level}. ${instruction}`,
-        },
-      ],
-    });
-    return textOf(response.content) || null;
+      `Problem: "${title}" (leetcode.com/problems/${slug}/)\n\nHint level ${level}. ${instruction}`,
+      2000,
+    );
+    return text || null;
   } catch (e) {
     console.error("[hints] generation failed:", e);
     return null;
@@ -109,21 +106,59 @@ export async function generatePatternNote(
 ): Promise<string | null> {
   if (!hintsAvailable()) return null;
   try {
-    const response = await client().messages.create({
-      model: MODEL,
-      max_tokens: 1000,
-      thinking: { type: "adaptive" },
-      output_config: { effort: "low" },
-      system:
-        "Summarize the algorithmic technique in a submitted solution in ONE sentence " +
+    const text = await complete(
+      "Summarize the algorithmic technique in a submitted solution in ONE sentence " +
         "under 20 words. Name the pattern and the key invariant. No preamble.",
-      messages: [
-        { role: "user", content: `Problem: ${title}\nLanguage: ${lang}\n\n\`\`\`\n${code.slice(0, 8000)}\n\`\`\`` },
-      ],
-    });
-    return textOf(response.content).slice(0, 300) || null;
+      `Problem: ${title}\nLanguage: ${lang}\n\n\`\`\`\n${code.slice(0, 8000)}\n\`\`\``,
+      400,
+    );
+    return text.slice(0, 300) || null;
   } catch (e) {
     console.error("[hints] pattern note failed:", e);
+    return null;
+  }
+}
+
+/**
+ * Turn your own account of the attempt into an SM-2 grade.
+ *
+ * Timing and failed submissions are proxies; what you actually remember about
+ * the struggle is the better signal, so a written note outranks the inferred
+ * grade when one is given.
+ */
+export async function gradeFromNotes(
+  title: string,
+  notes: string,
+  difficulty: string,
+  durationSec: number | null,
+  code?: string | null,
+): Promise<{ grade: number; summary: string } | null> {
+  if (!hintsAvailable()) return null;
+  const mins = durationSec ? Math.round(durationSec / 60) : null;
+  try {
+    const raw = await complete(
+      "You convert a solver's own account of an attempt into a spaced-repetition grade.\n" +
+        "Scale: 5 = instant and certain; 4 = solid, minor friction; 3 = got it but slow or shaky; " +
+        "2 = heavy struggle, nearly stuck; 1 = needed major help; 0 = did not really solve it.\n" +
+        "Weigh the writer's description of struggle far more than elapsed time.\n" +
+        'Reply as strict JSON only: {"grade": <0-5 integer>, "summary": "<max 15 words>"}',
+      `Problem: ${title} (${difficulty})\n` +
+        (mins != null ? `Time: ${mins} min\n` : "") +
+        `\nTheir notes:\n${notes.slice(0, 4000)}` +
+        (code ? `\n\nTheir accepted solution:\n\`\`\`\n${code.slice(0, 4000)}\n\`\`\`` : ""),
+      600,
+    );
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (!m) return null;
+    const parsed = JSON.parse(m[0]) as { grade?: unknown; summary?: unknown };
+    const grade = Number(parsed.grade);
+    if (!Number.isFinite(grade)) return null;
+    return {
+      grade: Math.max(0, Math.min(5, Math.round(grade))),
+      summary: String(parsed.summary ?? "").slice(0, 200),
+    };
+  } catch (e) {
+    console.error("[hints] note grading failed:", e);
     return null;
   }
 }

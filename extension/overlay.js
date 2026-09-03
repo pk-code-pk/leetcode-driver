@@ -1,0 +1,277 @@
+/**
+ * On-page timer for the live attempt.
+ *
+ * Duration drives the inferred grade, so the clock has to be visible and
+ * correctable — pause when you walk away, reset when you actually start.
+ * Lives in a shadow root so neither site's CSS can reach it.
+ */
+(() => {
+  const HIDE_KEY = "__ld_timer_hidden";
+  let state = null;      // payload from /api/attempt
+  let localPausedAt = null;
+  let host, root, els;
+
+  const fmt = (s) => {
+    const m = Math.floor(s / 60);
+    return `${String(m).padStart(2, "0")}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  };
+
+  async function creds() {
+    const { driverUrl, driverToken } = await chrome.storage.sync.get(["driverUrl", "driverToken"]);
+    return driverUrl && driverToken ? { url: driverUrl.replace(/\/$/, ""), token: driverToken } : null;
+  }
+
+  async function fetchAttempt() {
+    const c = await creds();
+    if (!c) return null;
+    try {
+      const r = await fetch(`${c.url}/api/attempt`, { headers: { "x-driver-token": c.token } });
+      if (!r.ok) return null;
+      return (await r.json()).attempt;
+    } catch {
+      return null;
+    }
+  }
+
+  async function send(action) {
+    const c = await creds();
+    if (!c) return;
+    try {
+      await fetch(`${c.url}/api/timer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-driver-token": c.token },
+        body: JSON.stringify({ action }),
+      });
+    } catch {}
+  }
+
+  function build() {
+    host = document.createElement("div");
+    host.id = "leetcode-driver-timer";
+    host.style.cssText = "position:fixed;right:18px;bottom:18px;z-index:2147483647";
+    root = host.attachShadow({ mode: "open" });
+    root.innerHTML = `
+      <style>
+        :host { all: initial; }
+        .box {
+          font: 13px/1.35 ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+          background: #10201d; color: #e8f2ef; border: 1px solid #2c4a43;
+          border-radius: 12px; padding: 10px 12px; min-width: 176px;
+          box-shadow: 0 10px 28px rgba(0,0,0,.4);
+        }
+        .title { font-weight: 600; margin-bottom: 2px; }
+        .meta { color: #8fb3aa; font-size: 11px; margin-bottom: 8px; }
+        .t { font: 600 26px/1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .5px;
+             font-variant-numeric: tabular-nums; }
+        .over  { color: #f0c674; }
+        .way   { color: #f08a7a; }
+        .paused{ color: #7f9d95; }
+        .row { display: flex; gap: 6px; margin-top: 9px; }
+        textarea {
+          width: 100%; box-sizing: border-box; margin-top: 9px; resize: vertical;
+          min-height: 66px; font: inherit; color: #e8f2ef; background: #0b1917;
+          border: 1px solid #2c4a43; border-radius: 8px; padding: 7px 8px;
+        }
+        textarea::placeholder { color: #5f807a; }
+        .note-h { font-weight: 600; margin-bottom: 2px; }
+        .hint { color: #8fb3aa; font-size: 11px; }
+        .ok { color: #9ad6a5; font-size: 11px; margin-top: 6px; }
+        button {
+          font: inherit; font-size: 11px; cursor: pointer; color: #cfe6df;
+          background: #17302b; border: 1px solid #2c4a43; border-radius: 7px; padding: 4px 8px;
+        }
+        button:hover { background: #1e3d37; }
+        .x { position:absolute; top:6px; right:8px; border:0; background:none; color:#6e8f87; padding:2px; }
+      </style>
+      <div class="box">
+        <button class="x" title="Hide">&times;</button>
+        <div class="title"></div>
+        <div class="meta"></div>
+        <div class="t">00:00</div>
+        <div class="row">
+          <button data-a="pause">Pause</button>
+          <button data-a="reset">Reset</button>
+          <button data-a="next">Next &rsaquo;</button>
+        </div>
+      </div>`;
+    document.documentElement.appendChild(host);
+
+    els = {
+      title: root.querySelector(".title"),
+      meta: root.querySelector(".meta"),
+      t: root.querySelector(".t"),
+      pause: root.querySelector('[data-a="pause"]'),
+      next: root.querySelector('[data-a="next"]'),
+      reset: root.querySelector('[data-a="reset"]'),
+      close: root.querySelector(".x"),
+    };
+
+    els.pause.addEventListener("click", async () => {
+      const pausing = !localPausedAt;
+      localPausedAt = pausing ? Date.now() : null;
+      if (!pausing && state) state.pausedSec += Math.floor((Date.now() - state.__pauseStart) / 1000);
+      if (pausing && state) state.__pauseStart = Date.now();
+      await send(pausing ? "pause" : "resume");
+      render();
+    });
+
+    els.reset.addEventListener("click", async () => {
+      if (state) { state.startedAt = new Date().toISOString(); state.pausedSec = 0; }
+      localPausedAt = null;
+      await send("reset");
+      render();
+    });
+
+    els.next.addEventListener("click", async () => {
+      els.next.disabled = true;
+      els.next.textContent = "…";
+      const c = await creds();
+      if (!c) return;
+      try {
+        const r = await fetch(`${c.url}/api/serve`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-driver-token": c.token },
+        });
+        const j = await r.json();
+        if (j.url) { location.href = j.url; return; }
+      } catch {}
+      els.next.disabled = false;
+      els.next.textContent = "Next \u203a";
+    });
+
+    els.close.addEventListener("click", () => {
+      sessionStorage.setItem(HIDE_KEY, "1");
+      host.remove();
+      host = null;
+    });
+  }
+
+  function render() {
+    if (!host) return;
+
+    // Nothing in flight: keep a way to start the next one from any tab.
+    if (!state) {
+      els.title.textContent = "Nothing in flight";
+      els.meta.textContent = "NeetCode 150 order";
+      els.t.textContent = "--:--";
+      els.t.className = "t paused";
+      els.pause.hidden = true;
+      els.reset.hidden = true;
+      return;
+    }
+    els.pause.hidden = false;
+    els.reset.hidden = false;
+    const started = new Date(state.startedAt).getTime();
+    const pausedNow = localPausedAt ? Math.floor((Date.now() - state.__pauseStart) / 1000) : 0;
+    const sec = Math.max(0, Math.floor((Date.now() - started) / 1000) - state.pausedSec - pausedNow);
+
+    els.title.textContent = state.title;
+    els.meta.textContent =
+      `${state.isReview ? "Review" : "New"} · ${state.difficulty} · target ${state.baselineMin}m` +
+      (state.hintLevel ? ` · ${state.hintLevel} hint${state.hintLevel > 1 ? "s" : ""}` : "");
+
+    const ratio = sec / 60 / state.baselineMin;
+    els.t.className = "t" + (localPausedAt ? " paused" : ratio > 2 ? " way" : ratio > 1 ? " over" : "");
+    els.t.textContent = fmt(sec);
+    els.pause.textContent = localPausedAt ? "Resume" : "Pause";
+  }
+
+  async function refresh() {
+    const a = await fetchAttempt();
+    if (!a) {
+      state = null;
+      if (!host && !sessionStorage.getItem(HIDE_KEY)) build();
+      render();
+      return;
+    }
+    const keepPause = state?.__pauseStart;
+    state = a;
+    state.__pauseStart = keepPause ?? (a.pausedAt ? new Date(a.pausedAt).getTime() : null);
+    localPausedAt = a.pausedAt ? new Date(a.pausedAt).getTime() : localPausedAt;
+    if (!host && !sessionStorage.getItem(HIDE_KEY)) build();
+    render();
+  }
+
+  /**
+   * Ask for a written account of the attempt. The model turns it into the
+   * grade, which beats inferring difficulty from a stopwatch.
+   */
+  function askForNotes(slug) {
+    const box = document.createElement("div");
+    box.style.cssText = "position:fixed;right:18px;bottom:18px;z-index:2147483647";
+    const sr = box.attachShadow({ mode: "open" });
+    sr.innerHTML = `
+      <style>
+        :host { all: initial; }
+        .box {
+          font: 13px/1.35 ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+          background: #10201d; color: #e8f2ef; border: 1px solid #2c4a43;
+          border-radius: 12px; padding: 11px 13px; width: 264px;
+          box-shadow: 0 10px 28px rgba(0,0,0,.4);
+        }
+        .note-h { font-weight: 600; margin-bottom: 2px; }
+        .hint { color: #8fb3aa; font-size: 11px; }
+        textarea {
+          width: 100%; box-sizing: border-box; margin-top: 9px; resize: vertical;
+          min-height: 72px; font: inherit; color: #e8f2ef; background: #0b1917;
+          border: 1px solid #2c4a43; border-radius: 8px; padding: 7px 8px;
+        }
+        textarea::placeholder { color: #5f807a; }
+        .row { display: flex; gap: 6px; margin-top: 8px; }
+        button {
+          font: inherit; font-size: 11px; cursor: pointer; color: #cfe6df;
+          background: #17302b; border: 1px solid #2c4a43; border-radius: 7px; padding: 4px 9px;
+        }
+        button:hover { background: #1e3d37; }
+        .ok { color: #9ad6a5; font-size: 11px; margin-top: 7px; }
+      </style>
+      <div class="box">
+        <div class="note-h">Solved \u2713</div>
+        <div class="hint">How did it go? This sets the review interval.</div>
+        <textarea placeholder="Knew the pattern instantly, but off-by-one on the window..."></textarea>
+        <div class="row">
+          <button data-a="save">Save</button>
+          <button data-a="skip">Skip</button>
+        </div>
+        <div class="ok" hidden></div>
+      </div>`;
+    document.documentElement.appendChild(box);
+
+    const ta = sr.querySelector("textarea");
+    const ok = sr.querySelector(".ok");
+    ta.focus();
+
+    sr.querySelector('[data-a="skip"]').addEventListener("click", () => box.remove());
+    sr.querySelector('[data-a="save"]').addEventListener("click", async () => {
+      const notes = ta.value.trim();
+      if (!notes) return box.remove();
+      const c = await creds();
+      if (!c) return box.remove();
+      ok.hidden = false;
+      ok.textContent = "Grading\u2026";
+      try {
+        const r = await fetch(`${c.url}/api/note`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-driver-token": c.token },
+          body: JSON.stringify({ slug, notes }),
+        });
+        const j = await r.json();
+        ok.textContent = j.regraded
+          ? `Grade ${j.grade}/5 \u00b7 next review in ${j.intervalDays}d`
+          : "Saved.";
+      } catch {
+        ok.textContent = "Saved locally \u2014 send failed.";
+      }
+      setTimeout(() => box.remove(), 2600);
+    });
+  }
+
+  window.addEventListener("__ld_solved", (e) => {
+    if (host) { host.remove(); host = null; }
+    askForNotes(e.detail?.slug);
+  });
+
+  refresh();
+  setInterval(render, 1000);
+  setInterval(refresh, 30000);
+})();

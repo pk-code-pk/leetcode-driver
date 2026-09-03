@@ -27,6 +27,16 @@ function attemptButtons(slug: string, attemptId: string): Button[][] {
   ];
 }
 
+/** Elapsed time minus whatever the timer was paused for. */
+function workedSec(
+  a: { pausedSec: number; pausedAt: Date | null },
+  from: Date,
+  to: Date,
+): number {
+  const paused = a.pausedSec + (a.pausedAt ? Math.floor((to.getTime() - a.pausedAt.getTime()) / 1000) : 0);
+  return Math.max(0, Math.floor((to.getTime() - from.getTime()) / 1000) - paused);
+}
+
 /** Push the next problem and open an attempt against it. */
 export async function serveNext(prefix = ""): Promise<string | null> {
   const s = await getSettings();
@@ -92,7 +102,7 @@ export async function syncSolves(): Promise<number> {
 
   const solvedAt = new Date(accepted.timestamp * 1000);
   const startedAt = attempt.openedAt ?? attempt.servedAt;
-  const durationSec = Math.max(0, Math.floor((solvedAt.getTime() - startedAt.getTime()) / 1000));
+  const durationSec = workedSec(attempt, startedAt, solvedAt);
 
   const [problem] = await db.select().from(schema.problems).where(eq(schema.problems.slug, attempt.slug));
   const [existing] = await db.select().from(schema.cards).where(eq(schema.cards.slug, attempt.slug));
@@ -145,6 +155,10 @@ export async function syncSolves(): Promise<number> {
     lastDurationSec: durationSec,
     lastFailedSubmissions: failed,
     lastHintLevel: attempt.hintLevel,
+    preEase: existing?.ease ?? 2.5,
+    preIntervalDays: existing?.intervalDays ?? 0,
+    preReps: existing?.reps ?? 0,
+    preLapses: existing?.lapses ?? 0,
     ...(code ? { code, lang } : {}),
     ...(patternNote ? { patternNote } : {}),
   };
@@ -189,7 +203,7 @@ export async function manualSolve(opts: {
 
   const solvedAt = new Date();
   const startedAt = attempt.openedAt ?? attempt.servedAt;
-  const durationSec = Math.max(0, Math.floor((solvedAt.getTime() - startedAt.getTime()) / 1000));
+  const durationSec = workedSec(attempt, startedAt, solvedAt);
 
   const [problem] = await db.select().from(schema.problems).where(eq(schema.problems.slug, attempt.slug));
   const [existing] = await db.select().from(schema.cards).where(eq(schema.cards.slug, attempt.slug));
@@ -237,6 +251,10 @@ export async function manualSolve(opts: {
     lastDurationSec: durationSec,
     lastFailedSubmissions: failed,
     lastHintLevel: attempt.hintLevel,
+    preEase: existing?.ease ?? 2.5,
+    preIntervalDays: existing?.intervalDays ?? 0,
+    preReps: existing?.reps ?? 0,
+    preLapses: existing?.lapses ?? 0,
     ...(opts.code ? { code: opts.code, lang: opts.lang ?? null } : {}),
     ...(patternNote ? { patternNote } : {}),
   };

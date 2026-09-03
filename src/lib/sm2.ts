@@ -24,7 +24,7 @@ export type Telemetry = {
 const MAX_INTERVAL_DAYS = 180;
 
 /** Minutes a clean first solve is expected to take. */
-const BASELINE_MIN: Record<string, number> = { Easy: 12, Medium: 25, Hard: 45 };
+export const BASELINE_MIN: Record<string, number> = { Easy: 12, Medium: 25, Hard: 45 };
 
 /**
  * Map telemetry onto the SM-2 0-5 scale.
@@ -36,8 +36,14 @@ export function inferGrade(t: Telemetry): number {
   // A review should be markedly faster than a first encounter.
   const baseline = (BASELINE_MIN[t.difficulty] ?? 25) * (t.isReview ? 0.5 : 1);
 
-  if (t.durationSec != null && t.durationSec > 0) {
-    const ratio = t.durationSec / 60 / baseline;
+  // A problem left open overnight says nothing about how hard it was. Past this
+  // point the timing signal is noise, so treat it as missing rather than as a
+  // catastrophic solve.
+  const STALE_SEC = 4 * 3600;
+  const timed = t.durationSec != null && t.durationSec > 0 && t.durationSec < STALE_SEC;
+
+  if (timed) {
+    const ratio = t.durationSec! / 60 / baseline;
     if (ratio > 2.0) score -= 2.5;      // more than double the baseline
     else if (ratio > 1.5) score -= 2;
     else if (ratio > 1.0) score -= 1;   // over baseline, but not badly
@@ -64,23 +70,30 @@ export function inferGrade(t: Telemetry): number {
 export function schedule(card: CardState, grade: number, now: Date) {
   let { ease, intervalDays, reps, lapses } = card;
 
+  // Ease is updated *before* the interval is derived, per SM-2. Doing it after
+  // makes this repetition's multiplier ignore this repetition's grade, so a
+  // shaky recall and a fluent one schedule identically.
+  ease = Math.max(1.3, ease + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02)));
+
   if (grade < 3) {
     // Lapse. Textbook SM-2 resets to a 1-day interval and reps=0, which makes
     // lapsed problems pile up and re-lapse. Instead: step the ladder *back*
     // rather than to zero, and floor the interval at 3 days.
     // (Anti-pileup idea adapted from JMoooore/GoStudyNeetCode, MIT.)
     lapses += 1;
+    // On a first encounter there is no ladder to step back down, and a 3-day
+    // floor would delay a failed problem longer than an aced one.
+    const firstEncounter = reps === 0;
     reps = Math.max(0, reps - 2);
-    intervalDays = 3;
+    intervalDays = firstEncounter ? 1 : 3;
   } else {
     reps += 1;
-    if (reps === 1) intervalDays = 1;
+    // A first pass still separates a fluent solve from a shaky one, otherwise
+    // every grade above 2 collapses to the same one-day interval.
+    if (reps === 1) intervalDays = grade >= 5 ? 3 : grade === 4 ? 2 : 1;
     else if (reps === 2) intervalDays = 6;
     else intervalDays = Math.min(MAX_INTERVAL_DAYS, Math.round(intervalDays * ease));
   }
-
-  // Classic SM-2 ease update, floored at 1.3.
-  ease = Math.max(1.3, ease + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02)));
 
   const dueAt = new Date(now.getTime() + intervalDays * 86_400_000);
   const state: "learning" | "review" = grade < 3 || reps < 2 ? "learning" : "review";

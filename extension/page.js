@@ -9,9 +9,18 @@
       const m = models.find((x) => (x.getValue?.() ?? "").trim().length > 0);
       if (m) return { code: m.getValue(), lang: m.getLanguageId?.() ?? null };
     } catch {}
-    // Fallback: CodeMirror, or whatever text the editor rendered.
+    // Fallbacks, in order: CodeMirror, Monaco's rendered lines, a raw textarea.
     const cm = document.querySelector(".cm-content");
     if (cm?.innerText?.trim()) return { code: cm.innerText, lang: null };
+
+    const lines = document.querySelectorAll(".view-lines .view-line");
+    if (lines.length) {
+      const code = Array.from(lines).map((l) => l.innerText).join("\n");
+      if (code.trim()) return { code, lang: null };
+    }
+
+    const ta = document.querySelector("textarea[autocomplete='off']");
+    if (ta?.value?.trim()) return { code: ta.value, lang: null };
     return null;
   }
 

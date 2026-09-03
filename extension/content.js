@@ -31,6 +31,21 @@ function askForCode() {
   });
 }
 
+/** Tell the driver the clock actually started. */
+async function reportOpen() {
+  const s = slug();
+  if (!s) return;
+  const { driverUrl, driverToken } = await chrome.storage.sync.get(["driverUrl", "driverToken"]);
+  if (!driverUrl || !driverToken) return;
+  try {
+    await fetch(`${driverUrl.replace(/\/$/, "")}/api/open`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-driver-token": driverToken },
+      body: JSON.stringify({ slug: s }),
+    });
+  } catch {}
+}
+
 async function report() {
   const s = slug();
   if (!s) return;
@@ -56,6 +71,8 @@ async function report() {
     if (res.ok) {
       failed = 0;
       console.log("[leetcode-driver] solve reported:", s);
+      // The overlay owns the UI; tell it to ask for notes.
+      window.dispatchEvent(new CustomEvent("__ld_solved", { detail: { slug: s } }));
     } else {
       console.warn("[leetcode-driver] report rejected", res.status);
     }
@@ -81,3 +98,5 @@ obs.observe(document.body, { childList: true, subtree: true });
 const el = document.createElement("script");
 el.src = chrome.runtime.getURL("page.js");
 document.documentElement.appendChild(el);
+
+void reportOpen();
