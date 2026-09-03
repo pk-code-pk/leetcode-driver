@@ -139,10 +139,15 @@ export async function gradeFromNotes(
   try {
     const raw = await complete(
       "You convert a solver's own account of an attempt into a spaced-repetition grade.\n" +
-        "Scale: 5 = instant and certain; 4 = solid, minor friction; 3 = got it but slow or shaky; " +
+        "Scale: 5 = instant and certain, and the intended optimal approach; " +
+        "4 = optimal approach with minor friction; " +
+        "3 = solved unaided but not optimally (brute force, or worse time or space " +
+        "complexity than the problem is asking for), or optimal but slow and shaky; " +
         "2 = heavy struggle, needed a hint or the key idea from outside; " +
         "1 = could not produce a working solution without being walked through it; " +
         "0 = did not solve it at all.\n" +
+        "You are shown their accepted code when available: judge optimality from it, " +
+        "not from how confident the note sounds.\n" +
         "Reserve 0 and 1 for cases where they could NOT produce working code themselves. " +
         "Needing a nudge or a single key idea and then writing correct code unaided is a 2, " +
         "never a 1.\n" +
