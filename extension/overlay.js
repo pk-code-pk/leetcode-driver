@@ -7,6 +7,7 @@
  */
 (() => {
   const HIDE_KEY = "__ld_timer_hidden";
+  const COLLAPSE_KEY = "__ld_timer_collapsed";
   const HOST_NAME = location.hostname.includes("neetcode") ? "neetcode" : "leetcode";
   let state = null;      // payload from /api/attempt
   let offline = false;
@@ -64,7 +65,7 @@
   function build() {
     host = document.createElement("div");
     host.id = "leetcode-driver-timer";
-    host.style.cssText = "position:fixed;right:18px;bottom:18px;z-index:2147483647";
+    host.style.cssText = "position:fixed;left:18px;bottom:18px;z-index:2147483647";
     root = host.attachShadow({ mode: "open" });
     root.innerHTML = `
       <style>
@@ -98,9 +99,18 @@
         }
         button:hover { background: #1e3d37; }
         .x { position:absolute; top:6px; right:8px; border:0; background:none; color:#6e8f87; padding:2px; }
+        .min { position:absolute; top:6px; right:24px; border:0; background:none; color:#6e8f87; padding:2px; }
+        :host(.collapsed) .box { padding: 6px 10px; min-width: 0; }
+        :host(.collapsed) .title,
+        :host(.collapsed) .meta,
+        :host(.collapsed) .row,
+        :host(.collapsed) .x,
+        :host(.collapsed) .min { display: none; }
+        :host(.collapsed) .t { font-size: 15px; }
       </style>
       <div class="box">
-        <button class="x" title="Hide">&times;</button>
+        <button class="x" title="Hide for this tab">&times;</button>
+        <button class="min" title="Collapse">&minus;</button>
         <div class="title"></div>
         <div class="meta"></div>
         <div class="t">00:00</div>
@@ -227,6 +237,21 @@
       els.next.textContent = "Next \u203a";
     });
 
+    // Collapsed keeps the clock visible while clearing the buttons out of the
+    // way; the whole pill expands again on click.
+    const setCollapsed = (on) => {
+      host.classList.toggle("collapsed", on);
+      try { localStorage.setItem(COLLAPSE_KEY, on ? "1" : ""); } catch {}
+    };
+    root.querySelector(".min").addEventListener("click", (e) => {
+      e.stopPropagation();
+      setCollapsed(true);
+    });
+    host.addEventListener("click", () => {
+      if (host.classList.contains("collapsed")) setCollapsed(false);
+    });
+    try { if (localStorage.getItem(COLLAPSE_KEY)) host.classList.add("collapsed"); } catch {}
+
     els.close.addEventListener("click", () => {
       sessionStorage.setItem(HIDE_KEY, "1");
       host.remove();
@@ -295,7 +320,7 @@
    */
   function askForNotes(slug) {
     const box = document.createElement("div");
-    box.style.cssText = "position:fixed;right:18px;bottom:18px;z-index:2147483647";
+    box.style.cssText = "position:fixed;left:18px;bottom:18px;z-index:2147483647";
     const sr = box.attachShadow({ mode: "open" });
     sr.innerHTML = `
       <style>
