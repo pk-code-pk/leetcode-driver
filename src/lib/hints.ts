@@ -140,7 +140,12 @@ export async function gradeFromNotes(
     const raw = await complete(
       "You convert a solver's own account of an attempt into a spaced-repetition grade.\n" +
         "Scale: 5 = instant and certain; 4 = solid, minor friction; 3 = got it but slow or shaky; " +
-        "2 = heavy struggle, nearly stuck; 1 = needed major help; 0 = did not really solve it.\n" +
+        "2 = heavy struggle, needed a hint or the key idea from outside; " +
+        "1 = could not produce a working solution without being walked through it; " +
+        "0 = did not solve it at all.\n" +
+        "Reserve 0 and 1 for cases where they could NOT produce working code themselves. " +
+        "Needing a nudge or a single key idea and then writing correct code unaided is a 2, " +
+        "never a 1.\n" +
         "Weigh the writer's description of struggle far more than elapsed time.\n" +
         "Solving quickly after being given the key idea is not fluency: grade what it " +
         "took them to FIND the approach, not how fast they wrote it once they had it. " +
