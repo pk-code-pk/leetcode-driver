@@ -335,13 +335,18 @@
     if (!res.ok) {
       // Unreachable: keep showing whatever we had rather than blanking it.
       offline = true;
-      render();
+      if (host) render();
       return;
     }
     offline = false;
     state = res.attempt;
     lastSolved = res.lastSolved ?? lastSolved;
-    if (!host && !sessionStorage.getItem(HIDE_KEY)) build();
+    if (!host) {
+      let hidden = false;
+      try { hidden = Boolean(sessionStorage.getItem(HIDE_KEY)); } catch {}
+      if (hidden) { showHandle(); return; }
+      build();
+    }
     render();
   }
 
@@ -438,6 +443,16 @@
   window.addEventListener("__ld_solved", (e) => {
     if (host) { host.remove(); host = null; }
     askForNotes(e.detail?.slug);
+  });
+
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg?.type !== "toggle-overlay") return;
+    try { sessionStorage.removeItem(HIDE_KEY); } catch {}
+    document.getElementById("leetcode-driver-handle")?.remove();
+    if (!host) build();
+    host.classList.remove("collapsed");
+    try { localStorage.removeItem(COLLAPSE_KEY); } catch {}
+    void refresh();
   });
 
   refresh();

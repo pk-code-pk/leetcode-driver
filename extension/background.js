@@ -69,3 +69,13 @@ chrome.runtime.onMessage.addListener((msg, _sender, respond) => {
     return true;
   }
 });
+
+// Clicking the toolbar icon brings the overlay back, whatever state it is in.
+chrome.action.onClicked.addListener(async (tab) => {
+  if (!tab.id) return;
+  try {
+    await chrome.tabs.sendMessage(tab.id, { type: "toggle-overlay" });
+  } catch {
+    // No content script on this page (not LeetCode or NeetCode).
+  }
+});
