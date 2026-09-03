@@ -83,23 +83,32 @@ export function schedule(card: CardState, grade: number, now: Date) {
   ease = Math.max(1.3, ease + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02)));
 
   if (grade < 3) {
-    // Lapse. Textbook SM-2 resets to a 1-day interval and reps=0, which makes
-    // lapsed problems pile up and re-lapse. Instead: step the ladder *back*
-    // rather than to zero, and floor the interval at 3 days.
+    // Lapse. Step the ladder *back* rather than resetting reps to zero, so a
+    // problem you have seen many times doesn't restart from scratch.
     // (Anti-pileup idea adapted from JMoooore/GoStudyNeetCode, MIT.)
     lapses += 1;
-    // On a first encounter there is no ladder to step back down, and a 3-day
-    // floor would delay a failed problem longer than an aced one.
-    const firstEncounter = reps === 0;
     reps = Math.max(0, reps - 2);
-    intervalDays = firstEncounter ? 1 : 3;
+    // Tomorrow, always. The 3-day floor this replaces was borrowed to stop
+    // lapsed problems piling up, but against grade-driven intervals it inverted
+    // the scale: failing bought a longer delay than half-remembering.
+    intervalDays = 1;
   } else {
     reps += 1;
-    // A first pass still separates a fluent solve from a shaky one, otherwise
-    // every grade above 2 collapses to the same one-day interval.
-    if (reps === 1) intervalDays = grade >= 5 ? 3 : grade === 4 ? 2 : 1;
-    else if (reps === 2) intervalDays = 6;
-    else intervalDays = Math.min(MAX_INTERVAL_DAYS, Math.round(intervalDays * ease));
+
+    // How well it went decides how far out it goes — not how many times you
+    // have seen it. Textbook SM-2 hardcodes the first two successes at 1 and 6
+    // days, so a shaky recall and a fluent one land identically and a problem
+    // you keep barely scraping through still drifts out of range.
+    const BASE: Record<number, number> = { 3: 1, 4: 2, 5: 3 };
+    // Growth is the ease you have earned, damped when recall was shaky.
+    const GROWTH: Record<number, number> = { 3: 0.5, 4: 0.75, 5: 1 };
+    const g = Math.min(5, Math.max(3, Math.round(grade)));
+
+    intervalDays =
+      intervalDays > 0
+        ? Math.max(BASE[g], Math.round(intervalDays * ease * GROWTH[g]))
+        : BASE[g];
+    intervalDays = Math.min(MAX_INTERVAL_DAYS, intervalDays);
   }
 
   const dueAt = new Date(now.getTime() + intervalDays * 86_400_000);
