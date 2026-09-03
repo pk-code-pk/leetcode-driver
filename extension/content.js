@@ -20,7 +20,7 @@ function slug() {
 
 function askForCode() {
   return new Promise((resolve) => {
-    const t = setTimeout(() => resolve(null), 700);
+    const t = setTimeout(() => resolve(null), 2500);
     window.addEventListener("message", function onMsg(e) {
       if (e.source !== window || e.data?.__ld !== "code") return;
       clearTimeout(t);
@@ -81,18 +81,49 @@ async function report() {
   }
 }
 
-// Verdicts render as new nodes rather than navigations, so watch the subtree.
-const obs = new MutationObserver((muts) => {
-  for (const m of muts) {
-    for (const node of m.addedNodes) {
-      const text = node.innerText ?? node.textContent ?? "";
-      if (!text || text.length > 400) continue;
-      if (ACCEPTED.test(text)) return void report();
-      if (REJECTED.test(text)) failed++;
+// The verdict is a small element ("Accepted") inside a much larger result
+// panel, so scanning mutation payloads misses it whenever the panel arrives as
+// one big subtree. Scan for the element itself instead, debounced.
+const VERDICT_SEL = "span, div, h1, h2, h3, p, strong";
+
+function scanVerdict() {
+  // LeetCode paints the live verdict green ("text-xl font-medium text-green-s")
+  // and greys out the submission-history rows, which also read "Accepted" — so
+  // colour, not text, is what separates this submission from an old one.
+  for (const el of document.querySelectorAll("div, span, h1, h2, h3, strong, p")) {
+    if (el.children.length) continue;
+    const t = el.textContent?.trim();
+    if (!t || t.length > 48) continue;
+    const cls = String(el.className ?? "");
+    const prominent = /green|text-xl/.test(cls);
+
+    if (ACCEPTED.test(t)) {
+      // On NeetCode the classes differ, so fall back to any short verdict there.
+      if (prominent || HOST === "neetcode") return "accepted";
     }
+    if (REJECTED.test(t) && (/red/.test(cls) || HOST === "neetcode")) return "rejected";
   }
-});
-obs.observe(document.body, { childList: true, subtree: true });
+  return null;
+}
+
+let scanTimer = null;
+let lastVerdict = null;
+
+function scheduleScan() {
+  if (scanTimer) return;
+  scanTimer = setTimeout(() => {
+    scanTimer = null;
+    const v = scanVerdict();
+    if (!v || v === lastVerdict) { lastVerdict = v; return; }
+    lastVerdict = v;
+    if (v === "accepted") report();
+    else failed++;
+  }, 400);
+}
+
+const obs = new MutationObserver(scheduleScan);
+obs.observe(document.body, { childList: true, subtree: true, characterData: true });
+scheduleScan();
 
 // Inject the page-world helper that can read the editor.
 const el = document.createElement("script");

@@ -7,6 +7,7 @@
  */
 (() => {
   const HIDE_KEY = "__ld_timer_hidden";
+  const HOST_NAME = location.hostname.includes("neetcode") ? "neetcode" : "leetcode";
   let state = null;      // payload from /api/attempt
   let localPausedAt = null;
   let host, root, els;
@@ -15,6 +16,12 @@
     const m = Math.floor(s / 60);
     return `${String(m).padStart(2, "0")}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
   };
+
+  /** The problem this tab is on, if any. */
+  function pageSlug() {
+    const m = location.pathname.match(/\/problems\/([^/]+)/);
+    return m ? m[1] : null;
+  }
 
   async function creds() {
     const { driverUrl, driverToken } = await chrome.storage.sync.get(["driverUrl", "driverToken"]);
@@ -91,6 +98,8 @@
         <div class="row">
           <button data-a="pause">Pause</button>
           <button data-a="reset">Reset</button>
+          <button data-a="start" hidden>Start</button>
+          <button data-a="solved">Solved</button>
           <button data-a="next">Next &rsaquo;</button>
         </div>
       </div>`;
@@ -102,6 +111,8 @@
       t: root.querySelector(".t"),
       pause: root.querySelector('[data-a="pause"]'),
       next: root.querySelector('[data-a="next"]'),
+      start: root.querySelector('[data-a="start"]'),
+      solved: root.querySelector('[data-a="solved"]'),
       reset: root.querySelector('[data-a="reset"]'),
       close: root.querySelector(".x"),
     };
@@ -120,6 +131,47 @@
       localPausedAt = null;
       await send("reset");
       render();
+    });
+
+    // Detection can miss; this never does.
+    els.solved.addEventListener("click", async () => {
+      const here = pageSlug() ?? state?.slug;
+      if (!here) return;
+      els.solved.disabled = true;
+      els.solved.textContent = "\u2026";
+      const c = await creds();
+      if (c) {
+        try {
+          await fetch(`${c.url}/api/solve`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-driver-token": c.token },
+            body: JSON.stringify({ slug: here, host: HOST_NAME }),
+          });
+        } catch {}
+      }
+      els.solved.disabled = false;
+      els.solved.textContent = "Solved";
+      window.dispatchEvent(new CustomEvent("__ld_solved", { detail: { slug: here } }));
+    });
+
+    els.start.addEventListener("click", async () => {
+      const here = pageSlug();
+      if (!here) return;
+      els.start.disabled = true;
+      els.start.textContent = "\u2026";
+      const c = await creds();
+      if (c) {
+        try {
+          await fetch(`${c.url}/api/start`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-driver-token": c.token },
+            body: JSON.stringify({ slug: here }),
+          });
+        } catch {}
+      }
+      els.start.disabled = false;
+      els.start.textContent = "Start";
+      await refresh();
     });
 
     els.next.addEventListener("click", async () => {
@@ -149,18 +201,26 @@
   function render() {
     if (!host) return;
 
-    // Nothing in flight: keep a way to start the next one from any tab.
+    // Nothing in flight. On a problem page, offer to time *this* one; anywhere
+    // else, offer the next in the queue.
     if (!state) {
-      els.title.textContent = "Nothing in flight";
-      els.meta.textContent = "NeetCode 150 order";
+      const here = pageSlug();
+      els.title.textContent = here ? "Start the clock?" : "Nothing in flight";
+      els.meta.textContent = here ? here.replace(/-/g, " ") : "NeetCode 150 order";
       els.t.textContent = "--:--";
       els.t.className = "t paused";
       els.pause.hidden = true;
       els.reset.hidden = true;
+      els.start.hidden = !here;
+      els.solved.hidden = !here;
+      els.next.textContent = here ? "Skip \u203a" : "Next \u203a";
       return;
     }
+    els.start.hidden = true;
+    els.solved.hidden = false;
     els.pause.hidden = false;
     els.reset.hidden = false;
+    els.next.textContent = "Next \u203a";
     const started = new Date(state.startedAt).getTime();
     const pausedNow = localPausedAt ? Math.floor((Date.now() - state.__pauseStart) / 1000) : 0;
     const sec = Math.max(0, Math.floor((Date.now() - started) / 1000) - state.pausedSec - pausedNow);

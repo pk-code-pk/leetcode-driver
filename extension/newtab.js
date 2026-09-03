@@ -51,6 +51,26 @@ function render(s) {
   action.hidden = false;
   action.textContent = s.next.isReview ? "Solve it again" : "Solve it";
 
+  // Opening the problem has to *start* the attempt, otherwise the solve has
+  // nothing to attach to and goes unrecorded.
+  action.addEventListener("click", async (e) => {
+    e.preventDefault();
+    action.textContent = "Starting\u2026";
+    let url = s.next.url;
+    try {
+      const { driverUrl, driverToken } = await chrome.storage.sync.get(["driverUrl", "driverToken"]);
+      const res = await fetch(`${driverUrl.replace(/\/$/, "")}/api/serve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-driver-token": driverToken },
+      });
+      const j = await res.json();
+      if (j.url) url = j.url;
+    } catch {
+      // Fall through: better to open the problem untracked than not at all.
+    }
+    window.location.href = url;
+  });
+
   $("ledger").textContent =
     `${s.solved} of ${s.target} done · ${s.due} due` + (s.debt ? ` · debt ${s.debt}` : "");
   $("dismiss").hidden = false;

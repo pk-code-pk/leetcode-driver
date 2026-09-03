@@ -195,10 +195,35 @@ export async function manualSolve(opts: {
   expectSlug?: string;
 } = {}): Promise<string | null> {
   const s = await getSettings();
-  const attempt = await openAttempt();
+  let attempt = await openAttempt();
+
+  // Solving counts whether or not the driver served it. If a report arrives for
+  // some other problem — or with nothing in flight at all — open an attempt
+  // retroactively so the solve still lands, just without a timing signal.
+  if (opts.expectSlug && attempt?.slug !== opts.expectSlug) {
+    const [p] = await db
+      .select()
+      .from(schema.problems)
+      .where(eq(schema.problems.slug, opts.expectSlug));
+    if (!p) return null;
+
+    const id = randomUUID();
+    const now = new Date();
+    const [existingCard] = await db
+      .select()
+      .from(schema.cards)
+      .where(eq(schema.cards.slug, opts.expectSlug));
+    await db.insert(schema.attempts).values({
+      id,
+      slug: opts.expectSlug,
+      servedAt: now,
+      openedAt: now, // no real start time, so duration reads as ~0 and is ignored
+      isReview: Boolean(existingCard),
+    });
+    [attempt] = await db.select().from(schema.attempts).where(eq(schema.attempts.id, id));
+  }
+
   if (!attempt) return null;
-  // A report from a page the driver didn't serve is ignored.
-  if (opts.expectSlug && opts.expectSlug !== attempt.slug) return null;
   const failed = Math.max(0, opts.failedSubmissions ?? 0);
 
   const solvedAt = new Date();
