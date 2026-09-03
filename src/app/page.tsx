@@ -1,9 +1,16 @@
+import { DateTime } from "luxon";
 import { desc, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getSettings } from "@/lib/settings";
 import { dueCount } from "@/lib/queue";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
+/** Timestamps read as wrong unless they are in the timezone you practise in. */
+const stamp = (d: Date, zone: string, fmt = "MM-dd HH:mm") =>
+  DateTime.fromJSDate(d).setZone(zone).toFormat(fmt);
 
 /** Read-only. The bot is the interface; this is just the look-back. */
 export default async function Home() {
@@ -69,7 +76,7 @@ export default async function Home() {
         <ul className="mt-3 space-y-1 font-mono text-xs text-neutral-500">
           {recent.map((e) => (
             <li key={e.id}>
-              {e.at.toISOString().slice(5, 16).replace("T", " ")} · {e.kind}
+              {stamp(e.at, s.timezone)} · {e.kind}
               {e.slug ? ` · ${e.slug}` : ""}
             </li>
           ))}
@@ -79,7 +86,7 @@ export default async function Home() {
 
       <p className="mt-10 text-xs text-neutral-600">
         avg ease {t.avgEase.toFixed(2)} · {t.lapses} lapses · last sync{" "}
-        {s.lastSyncAt ? s.lastSyncAt.toISOString().slice(0, 16).replace("T", " ") : "never"}
+        {s.lastSyncAt ? stamp(s.lastSyncAt, s.timezone, "MM-dd HH:mm ZZZZ") : "never"}
       </p>
     </main>
   );
