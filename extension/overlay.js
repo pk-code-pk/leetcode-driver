@@ -11,6 +11,7 @@
   const HOST_NAME = location.hostname.includes("neetcode") ? "neetcode" : "leetcode";
   let state = null;      // payload from /api/attempt
   let offline = false;
+  let lastSolved = null;
   let host, root, els;
 
   const fmt = (s) => {
@@ -40,7 +41,8 @@
     try {
       const r = await fetch(`${c.url}/api/attempt`, { headers: { "x-driver-token": c.token } });
       if (!r.ok) return { ok: false };
-      return { ok: true, attempt: (await r.json()).attempt };
+      const j = await r.json();
+      return { ok: true, attempt: j.attempt, lastSolved: j.lastSolved };
     } catch {
       return { ok: false };
     }
@@ -119,6 +121,7 @@
           <button data-a="reset">Reset</button>
           <button data-a="start" hidden>Start</button>
           <button data-a="solved">Solved</button>
+          <button data-a="note" hidden>Note</button>
           <button data-a="next">Next &rsaquo;</button>
         </div>
       </div>`;
@@ -132,6 +135,7 @@
       next: root.querySelector('[data-a="next"]'),
       start: root.querySelector('[data-a="start"]'),
       solved: root.querySelector('[data-a="solved"]'),
+      note: root.querySelector('[data-a="note"]'),
       reset: root.querySelector('[data-a="reset"]'),
       close: root.querySelector(".x"),
     };
@@ -177,6 +181,10 @@
         offline = false;
       }
       render();
+    });
+
+    els.note.addEventListener("click", () => {
+      if (lastSolved) askForNotes(lastSolved.slug, lastSolved.title);
     });
 
     // Detection can miss; this never does.
@@ -253,10 +261,30 @@
     try { if (localStorage.getItem(COLLAPSE_KEY)) host.classList.add("collapsed"); } catch {}
 
     els.close.addEventListener("click", () => {
-      sessionStorage.setItem(HIDE_KEY, "1");
+      try { sessionStorage.setItem(HIDE_KEY, "1"); } catch {}
       host.remove();
       host = null;
+      showHandle();
     });
+  }
+
+  /** A small dot left behind after dismissing, so the timer is recoverable. */
+  function showHandle() {
+    if (document.getElementById("leetcode-driver-handle")) return;
+    const h = document.createElement("div");
+    h.id = "leetcode-driver-handle";
+    h.title = "Show the driver";
+    h.style.cssText =
+      "position:fixed;left:14px;bottom:14px;z-index:2147483647;width:14px;height:14px;" +
+      "border-radius:50%;background:#2f6f62;border:1px solid #47968a;cursor:pointer;" +
+      "box-shadow:0 2px 8px rgba(0,0,0,.4)";
+    h.addEventListener("click", () => {
+      try { sessionStorage.removeItem(HIDE_KEY); } catch {}
+      h.remove();
+      build();
+      render();
+    });
+    document.documentElement.appendChild(h);
   }
 
   function render() {
@@ -274,10 +302,12 @@
       els.reset.hidden = true;
       els.start.hidden = !here;
       els.solved.hidden = !here;
+      els.note.hidden = !lastSolved;
       els.next.textContent = here ? "Skip \u203a" : "Next \u203a";
       return;
     }
     els.start.hidden = true;
+    els.note.hidden = true;
     els.solved.hidden = false;
     els.pause.hidden = false;
     els.reset.hidden = false;
@@ -310,6 +340,7 @@
     }
     offline = false;
     state = res.attempt;
+    lastSolved = res.lastSolved ?? lastSolved;
     if (!host && !sessionStorage.getItem(HIDE_KEY)) build();
     render();
   }
@@ -318,7 +349,7 @@
    * Ask for a written account of the attempt. The model turns it into the
    * grade, which beats inferring difficulty from a stopwatch.
    */
-  function askForNotes(slug) {
+  function askForNotes(slug, title) {
     const box = document.createElement("div");
     box.style.cssText = "position:fixed;left:18px;bottom:18px;z-index:2147483647";
     const sr = box.attachShadow({ mode: "open" });
@@ -348,7 +379,7 @@
         .ok { color: #9ad6a5; font-size: 11px; margin-top: 7px; }
       </style>
       <div class="box">
-        <div class="note-h">Solved \u2713</div>
+        <div class="note-h">${title ? title : "Solved \u2713"}</div>
         <div class="hint">How did it go? This sets the review interval.</div>
         <textarea placeholder="Knew the pattern instantly, but off-by-one on the window..."></textarea>
         <div class="row">

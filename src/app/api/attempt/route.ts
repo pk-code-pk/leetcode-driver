@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { openAttempt } from "@/lib/queue";
 import { BASELINE_MIN } from "@/lib/sm2";
@@ -14,7 +14,19 @@ export async function GET(req: Request) {
   }
 
   const attempt = await openAttempt();
-  if (!attempt) return NextResponse.json({ ok: true, attempt: null }, { headers: cors(req) });
+  if (!attempt) {
+    // Surface the last solve so a missed notes box isn't a lost grade.
+    const [recent] = await db
+      .select({ slug: schema.cards.slug, title: schema.problems.title, note: schema.cards.userNote })
+      .from(schema.cards)
+      .innerJoin(schema.problems, eq(schema.problems.slug, schema.cards.slug))
+      .orderBy(desc(schema.cards.lastSolvedAt))
+      .limit(1);
+    return NextResponse.json(
+      { ok: true, attempt: null, lastSolved: recent ?? null },
+      { headers: cors(req) },
+    );
+  }
 
   const [p] = await db.select().from(schema.problems).where(eq(schema.problems.slug, attempt.slug));
   const baseline = (BASELINE_MIN[p?.difficulty ?? "Medium"] ?? 25) * (attempt.isReview ? 0.5 : 1);
