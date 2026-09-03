@@ -269,16 +269,23 @@ export async function manualSolve(opts: {
     }
   }
 
+  // A resubmit opens its attempt retroactively, so duration and failure counts
+  // are both zero — no signal. Overwriting a measured grade with that neutral
+  // default loses the only real reading of the attempt, so keep what we had and
+  // just refresh the code.
+  const noSignal = durationSec === 0 && failed === 0;
+  const keepGrade = noSignal && existing?.lastGrade != null;
+
   const card = {
     slug: attempt.slug,
-    state: next.state,
-    ease: next.ease,
-    intervalDays: next.intervalDays,
-    reps: next.reps,
-    lapses: next.lapses,
-    dueAt: next.dueAt,
-    lastGrade: grade,
-    lastGradeSource: opts.source ?? "manual",
+    state: keepGrade ? existing.state : next.state,
+    ease: keepGrade ? existing.ease : next.ease,
+    intervalDays: keepGrade ? existing.intervalDays : next.intervalDays,
+    reps: keepGrade ? existing.reps : next.reps,
+    lapses: keepGrade ? existing.lapses : next.lapses,
+    dueAt: keepGrade ? existing.dueAt : next.dueAt,
+    lastGrade: keepGrade ? existing.lastGrade : grade,
+    lastGradeSource: keepGrade ? existing.lastGradeSource : (opts.source ?? "manual"),
     lastSolvedAt: solvedAt,
     lastDurationSec: durationSec,
     lastFailedSubmissions: failed,
@@ -305,11 +312,15 @@ export async function manualSolve(opts: {
       set: { solvedCount: alreadyToday ? sql`${schema.days.solvedCount}` : sql`${schema.days.solvedCount} + 1` },
     });
 
+  const shownGrade = keepGrade ? existing.lastGrade! : grade;
+  const shownInterval = keepGrade ? existing.intervalDays : next.intervalDays;
   await notifySolved(
-    s, problem?.title ?? attempt.slug, attempt.slug, grade, durationSec, failed,
-    next.intervalDays, patternNote, problem?.tags ?? [],
+    s, problem?.title ?? attempt.slug, attempt.slug, shownGrade, durationSec, failed,
+    shownInterval, patternNote, problem?.tags ?? [],
   );
-  await log("solved", attempt.slug, { grade, durationSec, failed, source: opts.source ?? "manual" });
+  await log("solved", attempt.slug, {
+    grade: shownGrade, durationSec, failed, source: opts.source ?? "manual", kept: keepGrade,
+  });
   return problem?.title ?? attempt.slug;
 }
 
