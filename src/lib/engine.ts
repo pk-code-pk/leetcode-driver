@@ -173,10 +173,21 @@ export async function syncSolves(): Promise<number> {
     existing?.lastSolvedAt != null &&
     DateTime.fromJSDate(existing.lastSolvedAt).setZone(s.timezone).toFormat("yyyy-LL-dd") === day;
   await db.insert(schema.days)
-    .values({ day, targetCount: s.dailyNewTarget, solvedCount: alreadyToday ? 0 : 1 })
+    .values({
+      day,
+      targetCount: s.dailyNewTarget,
+      solvedCount: alreadyToday ? 0 : 1,
+      newCount: alreadyToday || attempt.isReview ? 0 : 1,
+    })
     .onConflictDoUpdate({
       target: schema.days.day,
-      set: { solvedCount: alreadyToday ? sql`${schema.days.solvedCount}` : sql`${schema.days.solvedCount} + 1` },
+      set: {
+        solvedCount: alreadyToday ? sql`${schema.days.solvedCount}` : sql`${schema.days.solvedCount} + 1`,
+        newCount:
+          alreadyToday || attempt.isReview
+            ? sql`${schema.days.newCount}`
+            : sql`${schema.days.newCount} + 1`,
+      },
     });
 
   await notifySolved(
@@ -309,10 +320,21 @@ export async function manualSolve(opts: {
     existing?.lastSolvedAt != null &&
     DateTime.fromJSDate(existing.lastSolvedAt).setZone(s.timezone).toFormat("yyyy-LL-dd") === day;
   await db.insert(schema.days)
-    .values({ day, targetCount: s.dailyNewTarget, solvedCount: alreadyToday ? 0 : 1 })
+    .values({
+      day,
+      targetCount: s.dailyNewTarget,
+      solvedCount: alreadyToday ? 0 : 1,
+      newCount: alreadyToday || attempt.isReview ? 0 : 1,
+    })
     .onConflictDoUpdate({
       target: schema.days.day,
-      set: { solvedCount: alreadyToday ? sql`${schema.days.solvedCount}` : sql`${schema.days.solvedCount} + 1` },
+      set: {
+        solvedCount: alreadyToday ? sql`${schema.days.solvedCount}` : sql`${schema.days.solvedCount} + 1`,
+        newCount:
+          alreadyToday || attempt.isReview
+            ? sql`${schema.days.newCount}`
+            : sql`${schema.days.newCount} + 1`,
+      },
     });
 
   const shownGrade = keepGrade ? existing.lastGrade! : grade;
@@ -383,7 +405,7 @@ async function escalate(s: Settings) {
   if (!row) {
     await db.insert(schema.days).values({ day, targetCount: target, debtAtStart: s.debt }).onConflictDoNothing();
   }
-  const solved = row?.solvedCount ?? 0;
+  const solved = row?.newCount ?? 0;
   const tierSent = row?.tierSent ?? 0;
   if (solved >= target) return;
 
@@ -421,8 +443,8 @@ async function closeDay(s: Settings) {
   const [row] = await db.select().from(schema.days).where(eq(schema.days.day, day));
   if (!row || row.closed) return;
 
-  const met = row.solvedCount >= row.targetCount;
-  const debt = met ? Math.max(0, s.debt - 1) : s.debt + (row.targetCount - row.solvedCount);
+  const met = row.newCount >= row.targetCount;
+  const debt = met ? Math.max(0, s.debt - 1) : s.debt + (row.targetCount - row.newCount);
   const streak = met ? s.streak + 1 : 0;
 
   await db.update(schema.days).set({ closed: true }).where(eq(schema.days.day, day));
@@ -432,8 +454,8 @@ async function closeDay(s: Settings) {
     await sendMessage(
       s.telegramChatId,
       met
-        ? `🌙 Day closed. ${row.solvedCount}/${row.targetCount} done. Streak: <b>${streak}</b>.`
-        : `🌙 Day closed. ${row.solvedCount}/${row.targetCount}. Streak reset. Debt now <b>${debt}</b> — tomorrow's target is ${s.dailyNewTarget + debt}.`,
+        ? `🌙 Day closed. ${row.newCount}/${row.targetCount} new (${row.solvedCount} solved in all). Streak: <b>${streak}</b>.`
+        : `🌙 Day closed. ${row.newCount}/${row.targetCount} new (${row.solvedCount} solved in all). Streak reset. Debt now <b>${debt}</b> — tomorrow's target is ${s.dailyNewTarget + debt}.`,
       { silent: true },
     );
   }

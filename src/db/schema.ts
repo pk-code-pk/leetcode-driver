@@ -75,7 +75,10 @@ export const attempts = pgTable("attempts", {
 export const days = pgTable("days", {
   day: text("day").primaryKey(), // YYYY-MM-DD in the user's timezone
   targetCount: integer("target_count").notNull(),
+  /** Every solve today, reviews included — what you actually worked through. */
   solvedCount: integer("solved_count").notNull().default(0),
+  /** First-time solves only. The target is about moving through the list. */
+  newCount: integer("new_count").notNull().default(0),
   tierSent: integer("tier_sent").notNull().default(0), // highest escalation tier fired
   lastNagAt: timestamp("last_nag_at", { withTimezone: true }), // relentless mode
   debtAtStart: integer("debt_at_start").notNull().default(0),

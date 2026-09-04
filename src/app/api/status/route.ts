@@ -23,7 +23,8 @@ export async function GET(req: Request) {
   const [row] = await db.select().from(schema.days).where(eq(schema.days.day, day));
 
   const target = row?.targetCount ?? s.dailyNewTarget + s.debt;
-  const solved = row?.solvedCount ?? 0;
+  const solved = row?.newCount ?? 0;
+  const solvedAll = row?.solvedCount ?? 0;
   const next = await pickNext();
 
   return NextResponse.json(
@@ -32,6 +33,7 @@ export async function GET(req: Request) {
       met: solved >= target || s.paused,
       paused: s.paused,
       solved,
+    solvedAll,
       target,
       due: await dueCount(),
       streak: s.streak,
