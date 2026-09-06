@@ -122,6 +122,7 @@
           <button data-a="start" hidden>Start</button>
           <button data-a="solved">Solved</button>
           <button data-a="note" hidden>Note</button>
+          <button data-a="stuck">Stuck</button>
           <button data-a="next">Next &rsaquo;</button>
         </div>
       </div>`;
@@ -136,6 +137,7 @@
       start: root.querySelector('[data-a="start"]'),
       solved: root.querySelector('[data-a="solved"]'),
       note: root.querySelector('[data-a="note"]'),
+      stuck: root.querySelector('[data-a="stuck"]'),
       reset: root.querySelector('[data-a="reset"]'),
       close: root.querySelector(".x"),
     };
@@ -181,6 +183,29 @@
         offline = false;
       }
       render();
+    });
+
+    els.stuck.addEventListener("click", async () => {
+      const here = pageSlug() ?? state?.slug;
+      if (!here) return;
+      els.stuck.disabled = true;
+      els.stuck.textContent = "…";
+      const c = await creds();
+      let payload = null;
+      if (c) {
+        try {
+          const r = await fetch(`${c.url}/api/hint`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-driver-token": c.token },
+            body: JSON.stringify({ slug: here }),
+          });
+          payload = await r.json();
+        } catch {}
+      }
+      els.stuck.disabled = false;
+      els.stuck.textContent = "Stuck";
+      showHint(payload);
+      void refresh();
     });
 
     els.note.addEventListener("click", () => {
@@ -303,11 +328,13 @@
       els.start.hidden = !here;
       els.solved.hidden = !here;
       els.note.hidden = !lastSolved;
+      els.stuck.hidden = true;
       els.next.textContent = here ? "Skip \u203a" : "Next \u203a";
       return;
     }
     els.start.hidden = true;
     els.note.hidden = true;
+    els.stuck.hidden = false;
     els.solved.hidden = false;
     els.pause.hidden = false;
     els.reset.hidden = false;
@@ -354,6 +381,46 @@
    * Ask for a written account of the attempt. The model turns it into the
    * grade, which beats inferring difficulty from a stopwatch.
    */
+  /** Show one rung of the ladder. Deliberately not a solution. */
+  function showHint(payload) {
+    document.getElementById("leetcode-driver-hint")?.remove();
+    const box = document.createElement("div");
+    box.id = "leetcode-driver-hint";
+    box.style.cssText = "position:fixed;left:18px;bottom:150px;z-index:2147483647";
+    const sr = box.attachShadow({ mode: "open" });
+    const text =
+      payload?.text ??
+      (payload?.exhausted
+        ? "No rungs left — you have seen all four."
+        : payload?.error ?? "Could not reach the driver.");
+    const head = payload?.level ? `Hint ${payload.level}/${payload.of ?? 4}` : "Stuck";
+    sr.innerHTML = `
+      <style>
+        :host { all: initial; }
+        .box {
+          font: 13px/1.45 ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+          background: #10201d; color: #e8f2ef; border: 1px solid #2c4a43;
+          border-radius: 12px; padding: 11px 13px; width: 300px; max-height: 42vh; overflow: auto;
+          box-shadow: 0 10px 28px rgba(0,0,0,.4);
+        }
+        .h { font-weight: 600; margin-bottom: 5px; color: #f0c674; }
+        .t { white-space: pre-wrap; }
+        code, pre { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+        button {
+          font: inherit; font-size: 11px; cursor: pointer; color: #cfe6df; margin-top: 9px;
+          background: #17302b; border: 1px solid #2c4a43; border-radius: 7px; padding: 4px 9px;
+        }
+      </style>
+      <div class="box">
+        <div class="h">${head}</div>
+        <div class="t"></div>
+        <button data-a="close">Close</button>
+      </div>`;
+    sr.querySelector(".t").textContent = text;
+    sr.querySelector('[data-a="close"]').addEventListener("click", () => box.remove());
+    document.documentElement.appendChild(box);
+  }
+
   function askForNotes(slug, title) {
     const box = document.createElement("div");
     // Sits above the timer panel, which now stays put through a solve.
