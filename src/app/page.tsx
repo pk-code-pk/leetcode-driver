@@ -16,7 +16,7 @@ const stamp = (d: Date, zone: string, fmt = "MM-dd HH:mm") =>
 const GRADE_LABEL: Record<number, string> = {
   5: "optimal, instant",
   4: "optimal, some friction",
-  3: "solved, not optimal",
+  3: "not optimal, or shaky",
   2: "needed a hint",
   1: "walked through",
   0: "did not solve",
@@ -61,6 +61,7 @@ export default async function Home() {
       lastSolvedAt: schema.cards.lastSolvedAt,
       lastDurationSec: schema.cards.lastDurationSec,
       dueAt: schema.cards.dueAt,
+      gradeSummary: schema.cards.gradeSummary,
     })
     .from(schema.cards)
     .innerJoin(schema.problems, eq(schema.problems.slug, schema.cards.slug))
@@ -116,8 +117,11 @@ export default async function Home() {
                 {h.lastGrade ?? "—"}
               </span>
               <span className="flex-1 truncate text-neutral-300">{h.title}</span>
-              <span className="w-32 shrink-0 truncate text-right text-neutral-600">
-                {GRADE_LABEL[h.lastGrade ?? -1] ?? ""}
+              <span
+                className="w-56 shrink-0 truncate text-right text-neutral-600"
+                title={h.gradeSummary ?? GRADE_LABEL[h.lastGrade ?? -1] ?? ""}
+              >
+                {h.gradeSummary ?? GRADE_LABEL[h.lastGrade ?? -1] ?? ""}
               </span>
               <span className="w-12 shrink-0 text-right tabular-nums text-neutral-500">
                 {h.lastDurationSec ? `${Math.round(h.lastDurationSec / 60)}m` : "—"}

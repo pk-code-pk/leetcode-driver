@@ -45,6 +45,9 @@ export const cards = pgTable("cards", {
   patternNote: text("pattern_note"),  // one-line auto-generated summary
   /** Your own account of the attempt, typed on the page after solving. */
   userNote: text("user_note"),
+  /** The grader's one-line reason. Grade 3 spans "not optimal" and "optimal but
+   *  shaky", so the number alone cannot say which happened. */
+  gradeSummary: text("grade_summary"),
   /** Scheduling state *before* the last solve, so a regrade can replay cleanly. */
   preEase: real("pre_ease"),
   preIntervalDays: integer("pre_interval_days"),

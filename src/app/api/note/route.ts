@@ -83,6 +83,7 @@ export async function POST(req: Request) {
     dueAt: next.dueAt,
     lastGrade: judged.grade,
     lastGradeSource: "notes",
+    gradeSummary: judged.summary,
   }).where(eq(schema.cards.slug, slug));
 
   const s = await getSettings();
