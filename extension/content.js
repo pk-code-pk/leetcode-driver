@@ -86,10 +86,30 @@ async function report() {
 // one big subtree. Scan for the element itself instead, debounced.
 const VERDICT_SEL = "span, div, h1, h2, h3, p, strong";
 
+/**
+ * A submission verdict, and only a submission verdict.
+ *
+ * "Accepted" also appears when a Run passes the sample tests, and again in the
+ * greyed-out submission history — both of which falsely recorded solves. What
+ * separates a real submission is the stats panel beside the verdict: Runtime,
+ * Memory, and the "Beats" percentile. A Run shows Input/Output/Expected instead.
+ */
+const SUBMIT_MARKERS = /\b(beats|runtime|memory)\b/i;
+const RUN_MARKERS = /\b(expected|input|output)\b/i;
+
+function looksLikeSubmission() {
+  // LeetCode moves to /submissions/<id> on submit; Run leaves the URL alone.
+  if (/\/submissions?\//.test(location.pathname)) return true;
+
+  const text = document.body.innerText ?? "";
+  const tail = text.slice(0, 6000);
+  const submitHits = (tail.match(SUBMIT_MARKERS) ?? []).length;
+  if (!submitHits) return false;
+  // Both sets of words can appear; a run panel leads with its own.
+  return !(RUN_MARKERS.test(tail) && !/beats/i.test(tail));
+}
+
 function scanVerdict() {
-  // LeetCode paints the live verdict green ("text-xl font-medium text-green-s")
-  // and greys out the submission-history rows, which also read "Accepted" — so
-  // colour, not text, is what separates this submission from an old one.
   for (const el of document.querySelectorAll("div, span, h1, h2, h3, strong, p")) {
     if (el.children.length) continue;
     const t = el.textContent?.trim();
@@ -98,10 +118,14 @@ function scanVerdict() {
     const prominent = /green|text-xl/.test(cls);
 
     if (ACCEPTED.test(t)) {
-      // On NeetCode the classes differ, so fall back to any short verdict there.
-      if (prominent || HOST === "neetcode") return "accepted";
+      if (!(prominent || HOST === "neetcode")) continue;
+      if (!looksLikeSubmission()) continue;   // a passing Run is not a solve
+      return "accepted";
     }
-    if (REJECTED.test(t) && (/red/.test(cls) || HOST === "neetcode")) return "rejected";
+    if (REJECTED.test(t) && (/red/.test(cls) || HOST === "neetcode")) {
+      // Only count a rejection that came from a submission, for the same reason.
+      if (looksLikeSubmission()) return "rejected";
+    }
   }
   return null;
 }
