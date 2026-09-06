@@ -184,3 +184,47 @@ export async function gradeFromNotes(
     return null;
   }
 }
+
+/**
+ * Teach a pattern before the problems test it.
+ *
+ * The driver is otherwise pure assessment: it can tell you a topic went badly
+ * but never that you have not met it yet. Sixteen of the eighteen topics are
+ * untouched at the point of writing, so "never learned it" is the common case,
+ * not the edge one.
+ */
+export async function generateLesson(opts: {
+  label: string;
+  problems: string[];
+  prereqs: string[];
+  weakSpots?: string;
+}): Promise<string | null> {
+  if (!hintsAvailable()) return null;
+  const { label, problems, prereqs, weakSpots } = opts;
+  try {
+    return (
+      (await complete(
+        "You teach one algorithmic pattern to someone preparing for interviews, who has " +
+          "not met it before. Write for someone who codes in Python.\n" +
+          "Structure, using these exact headings:\n" +
+          "## The idea\n(the mental model in 3-4 sentences — what the pattern exploits, and why it works)\n" +
+          "## When it applies\n(3-5 concrete signals in a problem statement that should make them reach for it)\n" +
+          "## The shape\n(a short Python template, under 15 lines, with the invariant named in a comment)\n" +
+          "## Complexity\n(one line, and what it replaces — e.g. O(n) instead of the O(n^2) brute force)\n" +
+          "## Where it goes wrong\n(3-4 specific mistakes, not generic advice)\n" +
+          "## The variants\n(one line per problem listed, saying what that problem twists)\n\n" +
+          "Be concrete and terse. No pep talk, no restating the headings. Never give a " +
+          "complete solution to any named problem — the template plus what each variant " +
+          "twists is the limit.",
+        `Pattern: ${label}\n` +
+          (prereqs.length ? `Assumes they already know: ${prereqs.join(", ")}\n` : "") +
+          `Problems in this topic: ${problems.join(", ")}\n` +
+          (weakSpots ? `\nKnown habits of this learner, address them where relevant:\n${weakSpots}\n` : ""),
+        4000,
+      )) || null
+    );
+  } catch (e) {
+    console.error("[hints] lesson failed:", e);
+    return null;
+  }
+}

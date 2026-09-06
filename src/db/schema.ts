@@ -22,6 +22,9 @@ export const topics = pgTable("topics", {
   label: text("label").notNull(),
   prereqs: jsonb("prereqs").$type<string[]>().notNull().default([]),
   order: integer("order").notNull(),
+  /** Generated once and cached: the pattern taught before you are tested on it. */
+  lesson: text("lesson"),
+  lessonAt: timestamp("lesson_at", { withTimezone: true }),
 });
 
 /** One row per problem you've ever been served. The SM-2 state lives here. */

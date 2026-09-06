@@ -123,6 +123,7 @@
           <button data-a="solved">Solved</button>
           <button data-a="note" hidden>Note</button>
           <button data-a="stuck">Stuck</button>
+          <button data-a="learn">Learn</button>
           <button data-a="next">Next &rsaquo;</button>
         </div>
       </div>`;
@@ -138,6 +139,7 @@
       solved: root.querySelector('[data-a="solved"]'),
       note: root.querySelector('[data-a="note"]'),
       stuck: root.querySelector('[data-a="stuck"]'),
+      learn: root.querySelector('[data-a="learn"]'),
       reset: root.querySelector('[data-a="reset"]'),
       close: root.querySelector(".x"),
     };
@@ -183,6 +185,14 @@
         offline = false;
       }
       render();
+    });
+
+    // The pattern behind this problem, taught rather than hinted.
+    els.learn.addEventListener("click", async () => {
+      const here = pageSlug() ?? state?.slug;
+      const c = await creds();
+      if (!c) return;
+      window.open(here ? `${c.url}/learn?slug=${here}` : `${c.url}/learn`, "_blank");
     });
 
     els.stuck.addEventListener("click", async () => {

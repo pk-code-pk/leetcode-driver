@@ -83,7 +83,12 @@ export default async function Home() {
       </div>
 
       <section className="mt-10">
-        <h2 className="text-sm font-medium text-neutral-300">Coverage</h2>
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm font-medium text-neutral-300">Coverage</h2>
+          <a href="/learn" className="text-xs text-neutral-500 hover:text-emerald-400">
+            learn the patterns →
+          </a>
+        </div>
         <ul className="mt-3 space-y-1.5">
           {byTopic.map((row) => (
             <li key={row.topic} className="flex items-center gap-3 text-sm">
