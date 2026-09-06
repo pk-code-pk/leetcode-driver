@@ -1,5 +1,5 @@
 import { DateTime } from "luxon";
-import { desc, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getSettings } from "@/lib/settings";
 import { dueCount } from "@/lib/queue";
@@ -11,6 +11,22 @@ export const fetchCache = "force-no-store";
 /** Timestamps read as wrong unless they are in the timezone you practise in. */
 const stamp = (d: Date, zone: string, fmt = "MM-dd HH:mm") =>
   DateTime.fromJSDate(d).setZone(zone).toFormat(fmt);
+
+/** The grade is the whole point of the log, so say what it means. */
+const GRADE_LABEL: Record<number, string> = {
+  5: "optimal, instant",
+  4: "optimal, some friction",
+  3: "solved, not optimal",
+  2: "needed a hint",
+  1: "walked through",
+  0: "did not solve",
+};
+
+const gradeTone = (g: number | null) =>
+  g == null ? "text-neutral-600"
+    : g >= 4 ? "text-emerald-400"
+    : g === 3 ? "text-amber-400"
+    : "text-rose-400";
 
 /** Read-only. The bot is the interface; this is just the look-back. */
 export default async function Home() {
@@ -35,11 +51,21 @@ export default async function Home() {
     .leftJoin(schema.cards, sql`${schema.cards.slug} = ${schema.problems.slug}`)
     .groupBy(schema.problems.topic, schema.problems.topicOrder)
     .orderBy(schema.problems.topicOrder);
-  const recent = await db
-    .select()
-    .from(schema.events)
-    .orderBy(desc(schema.events.at))
-    .limit(12);
+  // Per problem, not per event: the raw feed repeated every resubmit and never
+  // said how any of it went.
+  const history = await db
+    .select({
+      slug: schema.cards.slug,
+      title: schema.problems.title,
+      lastGrade: schema.cards.lastGrade,
+      lastSolvedAt: schema.cards.lastSolvedAt,
+      lastDurationSec: schema.cards.lastDurationSec,
+      dueAt: schema.cards.dueAt,
+    })
+    .from(schema.cards)
+    .innerJoin(schema.problems, eq(schema.problems.slug, schema.cards.slug))
+    .orderBy(desc(schema.cards.lastSolvedAt))
+    .limit(15);
 
   const t = totals[0] ?? { solved: 0, avgEase: 0, lapses: 0 };
 
@@ -77,14 +103,31 @@ export default async function Home() {
 
       <section className="mt-10">
         <h2 className="text-sm font-medium text-neutral-300">Recent</h2>
-        <ul className="mt-3 space-y-1 font-mono text-xs text-neutral-500">
-          {recent.map((e) => (
-            <li key={e.id}>
-              {stamp(e.at, s.timezone)} · {e.kind}
-              {e.slug ? ` · ${e.slug}` : ""}
+        <ul className="mt-3 space-y-1.5">
+          {history.map((h) => (
+            <li key={h.slug} className="flex items-center gap-3 text-sm">
+              <span className="w-20 shrink-0 tabular-nums text-neutral-600">
+                {h.lastSolvedAt ? stamp(h.lastSolvedAt, s.timezone) : "—"}
+              </span>
+              <span
+                className={`w-6 shrink-0 text-center font-medium tabular-nums ${gradeTone(h.lastGrade)}`}
+                title={GRADE_LABEL[h.lastGrade ?? -1] ?? ""}
+              >
+                {h.lastGrade ?? "—"}
+              </span>
+              <span className="flex-1 truncate text-neutral-300">{h.title}</span>
+              <span className="w-32 shrink-0 truncate text-right text-neutral-600">
+                {GRADE_LABEL[h.lastGrade ?? -1] ?? ""}
+              </span>
+              <span className="w-12 shrink-0 text-right tabular-nums text-neutral-500">
+                {h.lastDurationSec ? `${Math.round(h.lastDurationSec / 60)}m` : "—"}
+              </span>
+              <span className="w-16 shrink-0 text-right tabular-nums text-neutral-600">
+                {h.dueAt ? `due ${stamp(h.dueAt, s.timezone, "MM-dd")}` : "—"}
+              </span>
             </li>
           ))}
-          {recent.length === 0 && <li>nothing yet</li>}
+          {history.length === 0 && <li className="text-neutral-600">nothing yet</li>}
         </ul>
       </section>
 
