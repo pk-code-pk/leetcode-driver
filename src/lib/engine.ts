@@ -437,9 +437,11 @@ async function escalate(s: Settings) {
 
 /** At quiet hours: bank the streak or convert the shortfall into debt. */
 async function closeDay(s: Settings) {
+  // Close the day that has actually ended. Sealing at the start of quiet hours
+  // ended the day at 22:00: the streak reset and debt was charged while there
+  // were still hours left to solve in, and nothing solved after counted.
   const now = DateTime.now().setZone(s.timezone);
-  if (now.hour < s.quietStartHour) return;
-  const day = today(s);
+  const day = now.minus({ days: 1 }).toFormat("yyyy-LL-dd");
   const [row] = await db.select().from(schema.days).where(eq(schema.days.day, day));
   if (!row || row.closed) return;
 

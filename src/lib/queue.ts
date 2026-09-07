@@ -13,7 +13,11 @@ async function unlockedTopics(): Promise<Set<string>> {
     .select({
       topic: schema.problems.topic,
       total: sql<number>`count(*)::int`,
-      started: sql<number>`count(case when ${schema.cards.reps} >= 1 then 1 end)::int`,
+      // Having a card means the problem was worked, which is what gates the next
+      // topic. Counting reps instead made struggling look like never starting:
+      // a grade under 3 resets reps, so a topic fought through and failed scored
+      // as untouched and its dependent stayed locked.
+      started: sql<number>`count(${schema.cards.slug})::int`,
     })
     .from(schema.problems)
     .leftJoin(schema.cards, eq(schema.cards.slug, schema.problems.slug))
