@@ -2,7 +2,12 @@ import { DateTime } from "luxon";
 import { desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getSettings } from "@/lib/settings";
-import { dueCount } from "@/lib/queue";
+import { dueCount, dueList } from "@/lib/queue";
+import { problemUrl } from "@/lib/leetcode";
+import { siteAuthed } from "@/lib/auth";
+import { Console } from "@/components/Console";
+import { StartButton } from "@/components/StartButton";
+import { SignOut } from "@/components/SignOut";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -28,12 +33,14 @@ const gradeTone = (g: number | null) =>
     : g === 3 ? "text-amber-400"
     : "text-rose-400";
 
-/** Read-only. The bot is the interface; this is just the look-back. */
+/** Look-back for everyone; once signed in, also what is due and the extension's controls. */
 export default async function Home() {
   // Sequential on purpose: through a transaction-mode pooler, firing these
   // concurrently over a small pool stalls until the function times out.
+  const authed = await siteAuthed();
   const s = await getSettings();
   const due = await dueCount();
+  const owed = authed ? await dueList() : [];
   const totals = await db
     .select({
       solved: sql<number>`count(*)::int`,
@@ -72,7 +79,12 @@ export default async function Home() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
-      <h1 className="text-2xl font-semibold tracking-tight">LeetCode Driver</h1>
+      <div className="flex items-baseline justify-between">
+        <h1 className="text-2xl font-semibold tracking-tight">LeetCode Driver</h1>
+        {authed ? <SignOut /> : (
+          <a href="/login" className="text-xs text-neutral-500 hover:text-emerald-400">sign in →</a>
+        )}
+      </div>
       <p className="mt-1 text-sm text-neutral-400">It picks, it nags, you solve.</p>
 
       <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -81,6 +93,29 @@ export default async function Home() {
         <Stat label="Debt" value={s.debt} accent={s.debt > 0} />
         <Stat label="Solved" value={`${t.solved}/150`} />
       </div>
+
+      {authed && <Console />}
+
+      {authed && (
+        <section className="mt-10">
+          <h2 className="text-sm font-medium text-neutral-300">
+            Due <span className="text-neutral-600">· {owed.filter((o) => o.overdue).length} now, {owed.filter((o) => !o.overdue).length} this week</span>
+          </h2>
+          <ul className="mt-3 space-y-1.5">
+            {owed.map((o) => (
+              <li key={o.slug} className="flex items-center gap-3 text-sm">
+                <span className={`w-20 shrink-0 tabular-nums ${o.overdue ? "text-amber-400" : "text-neutral-600"}`}>
+                  {o.overdue ? "due now" : o.dueAt ? stamp(o.dueAt, s.timezone, "MM-dd") : ""}
+                </span>
+                <span className="flex-1 truncate text-neutral-300">{o.title}</span>
+                <span className="w-16 shrink-0 text-neutral-600">{o.difficulty}</span>
+                <StartButton slug={o.slug} url={problemUrl(o.slug)} />
+              </li>
+            ))}
+            {owed.length === 0 && <li className="text-neutral-600">no reviews due</li>}
+          </ul>
+        </section>
+      )}
 
       <section className="mt-10">
         <div className="flex items-baseline justify-between">

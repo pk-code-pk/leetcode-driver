@@ -96,3 +96,25 @@ export async function openAttempt() {
     .limit(1);
   return rows[0] ?? null;
 }
+
+/** What is owed now, plus what comes due in the next week. */
+export async function dueList(horizonDays = 7) {
+  const now = new Date();
+  const rows = await db
+    .select({
+      slug: schema.problems.slug,
+      title: schema.problems.title,
+      difficulty: schema.problems.difficulty,
+      dueAt: schema.cards.dueAt,
+    })
+    .from(schema.cards)
+    .innerJoin(schema.problems, eq(schema.problems.slug, schema.cards.slug))
+    .where(
+      and(
+        sql`${schema.cards.dueAt} <= ${new Date(now.getTime() + horizonDays * 86_400_000)}`,
+        sql`${schema.cards.state} <> 'buried'`,
+      ),
+    )
+    .orderBy(asc(schema.cards.dueAt));
+  return rows.map((r) => ({ ...r, overdue: Boolean(r.dueAt && r.dueAt <= now) }));
+}

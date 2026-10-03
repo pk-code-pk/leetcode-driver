@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { authorized } from "@/lib/auth";
 import { manualSolve } from "@/lib/engine";
 import { PREMIUM_ON_NEETCODE } from "@/lib/leetcode";
 
@@ -17,7 +18,7 @@ const FROM_NEETCODE = Object.fromEntries(
  * poller could find.
  */
 export async function POST(req: Request) {
-  if (req.headers.get("x-driver-token") !== process.env.DRIVER_TOKEN) {
+  if (!authorized(req)) {
     return NextResponse.json({ ok: false }, { status: 401, headers: cors(req) });
   }
 
@@ -40,7 +41,7 @@ export async function POST(req: Request) {
     failedSubmissions: body.failedSubmissions,
     code: body.code ?? null,
     lang: body.lang ?? null,
-    source: body.host === "neetcode" ? "page:neetcode" : "page:leetcode",
+    source: body.host === "neetcode" ? "page:neetcode" : body.host === "site" ? "site" : "page:leetcode",
   });
 
   // Not an error: you solved something the driver hadn't served.

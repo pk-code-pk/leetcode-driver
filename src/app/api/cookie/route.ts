@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { authorized } from "@/lib/auth";
 import { encrypt } from "@/lib/crypto";
 import { updateSettings } from "@/lib/settings";
 import { whoAmI } from "@/lib/leetcode";
@@ -10,8 +11,7 @@ export const dynamic = "force-dynamic";
  * the recurring "re-paste your cookie" chore entirely.
  */
 export async function POST(req: Request) {
-  const token = req.headers.get("x-driver-token");
-  if (!token || token !== process.env.DRIVER_TOKEN) {
+  if (!authorized(req)) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
   const { session, csrf, username } = (await req.json()) as {

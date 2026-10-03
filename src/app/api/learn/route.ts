@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { authorized } from "@/lib/auth";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { generateLesson } from "@/lib/hints";
@@ -20,7 +21,7 @@ const WEAK_SPOTS =
  * change between visits.
  */
 export async function GET(req: Request) {
-  if (req.headers.get("x-driver-token") !== process.env.DRIVER_TOKEN) {
+  if (!authorized(req)) {
     return NextResponse.json({ ok: false }, { status: 401, headers: cors(req) });
   }
 

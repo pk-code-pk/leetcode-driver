@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { authorized, tokenValid } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
 import { dueCount, pickNext } from "@/lib/queue";
 import { problemUrl } from "@/lib/leetcode";
@@ -13,8 +14,7 @@ const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers
 /** Read-only state for the new-tab extension. */
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const token = req.headers.get("x-driver-token") ?? url.searchParams.get("token");
-  if (!token || token !== process.env.DRIVER_TOKEN) {
+  if (!authorized(req) && !tokenValid(url.searchParams.get("token"))) {
     return NextResponse.json({ ok: false }, { status: 401, headers: cors });
   }
 

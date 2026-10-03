@@ -176,7 +176,13 @@ a demand. See `extension/README.md` to install.
 
 - **Telegram** — the real interface. Problems, hints, escalation, overrides.
 - **`/next`** — 302s straight to the problem you should be solving. Bookmark it on your home screen.
-- **`/`** — read-only stats and topic coverage.
+- **`/`** — stats and topic coverage for anyone; after signing in at `/login` with your
+  `DRIVER_TOKEN`, also what's due (overdue + the next 7 days), and the extension's panel:
+  serve the next problem, start any due one, timer (pause/reset), Stuck (hint ladder),
+  Solved, and the post-solve note that regrades and queues the next problem.
+  The sign-in is a `SameSite=Strict` HttpOnly cookie, so it works from any browser.
+  Still extension-only: the LeetCode session sync (HttpOnly cookie) and auto-detecting a
+  solve / capturing your code from the editor — on the site, press **Solved** yourself.
 
 ## Commands
 

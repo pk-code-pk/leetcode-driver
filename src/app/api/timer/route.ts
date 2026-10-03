@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { authorized } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { openAttempt } from "@/lib/queue";
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
  * to be subtractable — otherwise stepping out for lunch reads as a hard solve.
  */
 export async function POST(req: Request) {
-  if (req.headers.get("x-driver-token") !== process.env.DRIVER_TOKEN) {
+  if (!authorized(req)) {
     return NextResponse.json({ ok: false }, { status: 401, headers: cors(req) });
   }
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { authorized } from "@/lib/auth";
 import { eq, isNull, and } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { openAttempt } from "@/lib/queue";
@@ -18,7 +19,7 @@ const FROM_NEETCODE = Object.fromEntries(
  * interval collapses.
  */
 export async function POST(req: Request) {
-  if (req.headers.get("x-driver-token") !== process.env.DRIVER_TOKEN) {
+  if (!authorized(req)) {
     return NextResponse.json({ ok: false }, { status: 401, headers: cors(req) });
   }
   let body: { slug?: string };
