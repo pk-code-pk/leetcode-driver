@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
+import { authorized } from "@/lib/auth";
 import { eq, desc } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { openAttempt } from "@/lib/queue";
 import { BASELINE_MIN } from "@/lib/sm2";
-import { PREMIUM_ON_NEETCODE } from "@/lib/leetcode";
+import { PREMIUM_ON_NEETCODE, problemUrl } from "@/lib/leetcode";
 
 export const dynamic = "force-dynamic";
 
 /** What the on-page timer needs: which problem is live, and since when. */
 export async function GET(req: Request) {
-  if (req.headers.get("x-driver-token") !== process.env.DRIVER_TOKEN) {
+  if (!authorized(req)) {
     return NextResponse.json({ ok: false }, { status: 401, headers: cors(req) });
   }
 
@@ -38,6 +39,7 @@ export async function GET(req: Request) {
         slug: attempt.slug,
         // The page knows itself by NeetCode's slug when it's hosted there.
         neetcodeSlug: PREMIUM_ON_NEETCODE[attempt.slug] ?? null,
+        url: problemUrl(attempt.slug),
         title: p?.title ?? attempt.slug,
         difficulty: p?.difficulty ?? "Medium",
         isReview: attempt.isReview,

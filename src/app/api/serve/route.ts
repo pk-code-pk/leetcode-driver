@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { authorized } from "@/lib/auth";
 import { serveNext } from "@/lib/engine";
 import { openAttempt } from "@/lib/queue";
 import { problemUrl } from "@/lib/leetcode";
@@ -10,7 +11,7 @@ export const dynamic = "force-dynamic";
  * page overlay can move you straight there without a trip through Telegram.
  */
 export async function POST(req: Request) {
-  if (req.headers.get("x-driver-token") !== process.env.DRIVER_TOKEN) {
+  if (!authorized(req)) {
     return NextResponse.json({ ok: false }, { status: 401, headers: cors(req) });
   }
 

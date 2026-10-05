@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { authorized } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { gradeFromNotes } from "@/lib/hints";
@@ -21,7 +22,7 @@ const FROM_NEETCODE = Object.fromEntries(
  * and reschedules from the pre-solve snapshot rather than compounding on it.
  */
 export async function POST(req: Request) {
-  if (req.headers.get("x-driver-token") !== process.env.DRIVER_TOKEN) {
+  if (!authorized(req)) {
     return NextResponse.json({ ok: false }, { status: 401, headers: cors(req) });
   }
 
