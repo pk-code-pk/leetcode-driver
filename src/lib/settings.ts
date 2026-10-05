@@ -12,6 +12,18 @@ export async function getSettings(): Promise<Settings> {
   return created;
 }
 
+/** Debt never exceeds this many days of target; past that the nag is noise. */
+export const MAX_DEBT_DAYS = 7;
+
+/** Outstanding problems from missed days, capped so an old runaway value heals. */
+export const debtOf = (s: Settings) => Math.min(Math.max(0, s.debt), s.dailyNewTarget * MAX_DEBT_DAYS);
+
+/** Today's target: the day row's if one was sealed in, otherwise daily + debt — both capped. */
+export function dailyTarget(s: Settings, row?: { targetCount: number } | null): number {
+  const max = s.dailyNewTarget + s.dailyNewTarget * MAX_DEBT_DAYS;
+  return Math.min(row?.targetCount ?? s.dailyNewTarget + debtOf(s), max);
+}
+
 export async function updateSettings(patch: Partial<Settings>) {
   await db.update(schema.settings).set(patch).where(eq(schema.settings.id, 1));
 }
