@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { getSettings, updateSettings } from "@/lib/settings";
+import { getSettings, updateSettings, dailyTarget, debtOf } from "@/lib/settings";
 import { answerCallback, sendMessage, esc } from "@/lib/telegram";
 import { getHint } from "@/lib/hints";
 import { serveNext, manualSolve } from "@/lib/engine";
@@ -120,6 +120,6 @@ async function onMessage(msg: NonNullable<Update["message"]>) {
   if (text.startsWith("/resume")) { await updateSettings({ paused: false }); await sendMessage(chatId, "Resumed."); return; }
   if (text.startsWith("/status")) {
     const due = await dueCount();
-    await sendMessage(chatId, `Due now: <b>${due}</b>\nStreak: <b>${s.streak}</b>\nDebt: <b>${s.debt}</b>\nTarget/day: ${s.dailyNewTarget + s.debt}${s.paused ? "\n\n⏸ Paused" : ""}`);
+    await sendMessage(chatId, `Due now: <b>${due}</b>\nStreak: <b>${s.streak}</b>\nDebt: <b>${debtOf(s)}</b>\nTarget/day: ${dailyTarget(s)}${s.paused ? "\n\n⏸ Paused" : ""}`);
   }
 }

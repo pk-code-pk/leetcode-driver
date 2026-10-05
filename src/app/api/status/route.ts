@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { authorized, tokenValid } from "@/lib/auth";
-import { getSettings } from "@/lib/settings";
+import { getSettings, dailyTarget, debtOf } from "@/lib/settings";
 import { dueCount, pickNext } from "@/lib/queue";
 import { problemUrl } from "@/lib/leetcode";
 import { db, schema } from "@/db";
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
   const day = DateTime.now().setZone(s.timezone).toFormat("yyyy-LL-dd");
   const [row] = await db.select().from(schema.days).where(eq(schema.days.day, day));
 
-  const target = row?.targetCount ?? s.dailyNewTarget + s.debt;
+  const target = dailyTarget(s, row);
   const solved = row?.newCount ?? 0;
   const solvedAll = row?.solvedCount ?? 0;
   const next = await pickNext();
@@ -37,7 +37,7 @@ export async function GET(req: Request) {
       target,
       due: await dueCount(),
       streak: s.streak,
-      debt: s.debt,
+      debt: debtOf(s),
       next: next && { ...next, url: problemUrl(next.slug) },
     },
     { headers: cors },

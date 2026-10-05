@@ -100,6 +100,9 @@ export async function openAttempt() {
 /** What is owed now, plus what comes due in the next week. */
 export async function dueList(horizonDays = 7) {
   const now = new Date();
+  const horizon = new Date(now.getTime() + horizonDays * 86_400_000);
+  // `lte` encodes the Date through the column; a Date inside a raw sql`` fragment
+  // reaches postgres-js unencoded and throws ERR_INVALID_ARG_TYPE.
   const rows = await db
     .select({
       slug: schema.problems.slug,
@@ -109,12 +112,7 @@ export async function dueList(horizonDays = 7) {
     })
     .from(schema.cards)
     .innerJoin(schema.problems, eq(schema.problems.slug, schema.cards.slug))
-    .where(
-      and(
-        sql`${schema.cards.dueAt} <= ${new Date(now.getTime() + horizonDays * 86_400_000)}`,
-        sql`${schema.cards.state} <> 'buried'`,
-      ),
-    )
+    .where(and(lte(schema.cards.dueAt, horizon), sql`${schema.cards.state} <> 'buried'`))
     .orderBy(asc(schema.cards.dueAt));
   return rows.map((r) => ({ ...r, overdue: Boolean(r.dueAt && r.dueAt <= now) }));
 }

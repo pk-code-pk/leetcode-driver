@@ -1,7 +1,7 @@
 import { DateTime } from "luxon";
 import { desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { getSettings } from "@/lib/settings";
+import { getSettings, debtOf } from "@/lib/settings";
 import { dueCount, dueList } from "@/lib/queue";
 import { problemUrl } from "@/lib/leetcode";
 import { siteAuthed } from "@/lib/auth";
@@ -90,7 +90,7 @@ export default async function Home() {
       <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Due now" value={due} accent={due > 0} />
         <Stat label="Streak" value={s.streak} />
-        <Stat label="Debt" value={s.debt} accent={s.debt > 0} />
+        <Stat label="Debt" value={debtOf(s)} accent={debtOf(s) > 0} />
         <Stat label="Solved" value={`${t.solved}/150`} />
       </div>
 

@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { DateTime } from "luxon";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { getAuth, getSettings, updateSettings, type Settings } from "./settings";
+import { getAuth, getSettings, updateSettings, dailyTarget, debtOf, type Settings } from "./settings";
 import { recentSubmissions, submissionCode, problemUrl, cookieIsValid, isPremium } from "./leetcode";
 import { inferGrade, schedule, GRADE_LABEL } from "./sm2";
 import { generatePatternNote } from "./hints";
@@ -401,9 +401,9 @@ async function escalate(s: Settings) {
   const day = today(s);
 
   const [row] = await db.select().from(schema.days).where(eq(schema.days.day, day));
-  const target = s.dailyNewTarget + s.debt;
+  const target = dailyTarget(s, row);
   if (!row) {
-    await db.insert(schema.days).values({ day, targetCount: target, debtAtStart: s.debt }).onConflictDoNothing();
+    await db.insert(schema.days).values({ day, targetCount: target, debtAtStart: debtOf(s) }).onConflictDoNothing();
   }
   const solved = row?.newCount ?? 0;
   const tierSent = row?.tierSent ?? 0;
@@ -445,8 +445,12 @@ async function closeDay(s: Settings) {
   const [row] = await db.select().from(schema.days).where(eq(schema.days.day, day));
   if (!row || row.closed) return;
 
-  const met = row.newCount >= row.targetCount;
-  const debt = met ? Math.max(0, s.debt - 1) : s.debt + (row.targetCount - row.newCount);
+  // The day's target already included the debt carried in, so what is still
+  // owed is simply the unmet part of it. Adding the old debt on top as well
+  // doubled it every missed day.
+  const target = dailyTarget(s, row);
+  const met = row.newCount >= target;
+  const debt = debtOf({ ...s, debt: target - row.newCount });
   const streak = met ? s.streak + 1 : 0;
 
   await db.update(schema.days).set({ closed: true }).where(eq(schema.days.day, day));
@@ -456,8 +460,8 @@ async function closeDay(s: Settings) {
     await sendMessage(
       s.telegramChatId,
       met
-        ? `🌙 Day closed. ${row.newCount}/${row.targetCount} new (${row.solvedCount} solved in all). Streak: <b>${streak}</b>.`
-        : `🌙 Day closed. ${row.newCount}/${row.targetCount} new (${row.solvedCount} solved in all). Streak reset. Debt now <b>${debt}</b> — tomorrow's target is ${s.dailyNewTarget + debt}.`,
+        ? `🌙 Day closed. ${row.newCount}/${target} new (${row.solvedCount} solved in all). Streak: <b>${streak}</b>.`
+        : `🌙 Day closed. ${row.newCount}/${target} new (${row.solvedCount} solved in all). Streak reset. Debt now <b>${debt}</b> — tomorrow's target is ${s.dailyNewTarget + debt}.`,
       { silent: true },
     );
   }
