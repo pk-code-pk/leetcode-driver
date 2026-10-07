@@ -10,7 +10,16 @@ function same(a: string | null | undefined, b: string | undefined): boolean {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
-export const tokenValid = (t: string | null | undefined) => same(t, process.env.DRIVER_TOKEN);
+/**
+ * DRIVER_TOKEN may be a comma-separated list: the first is the one to hand out,
+ * the rest are old tokens kept alive so clients still holding them don't break.
+ */
+const tokens = () =>
+  (process.env.DRIVER_TOKEN ?? "").split(",").map((t) => t.trim()).filter(Boolean);
+
+// no short-circuit, so timing doesn't reveal which slot matched
+export const tokenValid = (t: string | null | undefined) =>
+  tokens().reduce((ok, k) => same(t, k) || ok, false);
 
 function cookieOf(req: Request, name: string): string | null {
   for (const part of (req.headers.get("cookie") ?? "").split(";")) {
