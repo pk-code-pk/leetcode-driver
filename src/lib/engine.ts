@@ -211,6 +211,9 @@ export async function manualSolve(opts: {
   lang?: string | null;
   source?: string;
   expectSlug?: string;
+  /** For a solve logged after the fact (e.g. done offline): when it finished, and how long it took. */
+  solvedAt?: Date;
+  durationSec?: number;
 } = {}): Promise<string | null> {
   const s = await getSettings();
   let attempt = await openAttempt();
@@ -218,7 +221,8 @@ export async function manualSolve(opts: {
   // Solving counts whether or not the driver served it. If a report arrives for
   // some other problem — or with nothing in flight at all — open an attempt
   // retroactively so the solve still lands, just without a timing signal.
-  if (opts.expectSlug && attempt?.slug !== opts.expectSlug) {
+  // A backdated solve never consumes whatever is in flight now.
+  if (opts.expectSlug && (opts.solvedAt || attempt?.slug !== opts.expectSlug)) {
     const [p] = await db
       .select()
       .from(schema.problems)
@@ -226,7 +230,9 @@ export async function manualSolve(opts: {
     if (!p) return null;
 
     const id = randomUUID();
-    const now = new Date();
+    // With a reported duration, the attempt starts that long before the solve so
+    // the grade gets a real timing signal; otherwise duration reads as ~0 and is ignored.
+    const now = new Date((opts.solvedAt ?? new Date()).getTime() - (opts.durationSec ?? 0) * 1000);
     const [existingCard] = await db
       .select()
       .from(schema.cards)
@@ -235,7 +241,7 @@ export async function manualSolve(opts: {
       id,
       slug: opts.expectSlug,
       servedAt: now,
-      openedAt: now, // no real start time, so duration reads as ~0 and is ignored
+      openedAt: now,
       isReview: Boolean(existingCard),
     });
     [attempt] = await db.select().from(schema.attempts).where(eq(schema.attempts.id, id));
@@ -244,7 +250,7 @@ export async function manualSolve(opts: {
   if (!attempt) return null;
   const failed = Math.max(0, opts.failedSubmissions ?? 0);
 
-  const solvedAt = new Date();
+  const solvedAt = opts.solvedAt ?? new Date();
   const startedAt = attempt.openedAt ?? attempt.servedAt;
   const durationSec = workedSec(attempt, startedAt, solvedAt);
 
@@ -314,8 +320,8 @@ export async function manualSolve(opts: {
   await db.insert(schema.cards).values(card).onConflictDoUpdate({ target: schema.cards.slug, set: card });
   await db.update(schema.attempts).set({ solvedAt, failedSubmissions: failed }).where(eq(schema.attempts.id, attempt.id));
 
-  // Resubmitting a problem you already finished today is not a second problem.
-  const day = today(s);
+  // Resubmitting a problem you already finished that day is not a second problem.
+  const day = DateTime.fromJSDate(solvedAt).setZone(s.timezone).toFormat("yyyy-LL-dd");
   const alreadyToday =
     existing?.lastSolvedAt != null &&
     DateTime.fromJSDate(existing.lastSolvedAt).setZone(s.timezone).toFormat("yyyy-LL-dd") === day;
@@ -341,7 +347,7 @@ export async function manualSolve(opts: {
   const shownInterval = keepGrade ? existing.intervalDays : next.intervalDays;
   await notifySolved(
     s, problem?.title ?? attempt.slug, attempt.slug, shownGrade, durationSec, failed,
-    shownInterval, patternNote, problem?.tags ?? [],
+    shownInterval, patternNote, problem?.tags ?? [], solvedAt,
   );
   await log("solved", attempt.slug, {
     grade: shownGrade, durationSec, failed, source: opts.source ?? "manual", kept: keepGrade,
@@ -353,10 +359,11 @@ async function notifySolved(
   s: Settings, title: string, slug: string, grade: number,
   durationSec: number, failed: number, intervalDays: number, note: string | null,
   tags: string[] = [],
+  solvedAt: Date = new Date(),
 ) {
   if (!s.telegramChatId) return;
   const mins = Math.round(durationSec / 60);
-  const nextOn = DateTime.now().setZone(s.timezone).plus({ days: intervalDays }).toFormat("LLL d");
+  const nextOn = DateTime.fromJSDate(solvedAt).setZone(s.timezone).plus({ days: intervalDays }).toFormat("LLL d");
   const text =
     `✅ <b>${esc(title)}</b>\n\n` +
     `${mins}m · ${failed} failed submission${failed === 1 ? "" : "s"} · graded <b>${GRADE_LABEL[grade]}</b>\n` +
