@@ -8,6 +8,7 @@ import { siteAuthed } from "@/lib/auth";
 import { Console } from "@/components/Console";
 import { StartButton } from "@/components/StartButton";
 import { SignOut } from "@/components/SignOut";
+import { ForgiveDebt } from "@/components/ForgiveDebt";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -90,7 +91,9 @@ export default async function Home() {
       <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Due now" value={due} accent={due > 0} />
         <Stat label="Streak" value={s.streak} />
-        <Stat label="Debt" value={debtOf(s)} accent={debtOf(s) > 0} />
+        <Stat label="Debt" value={debtOf(s)} accent={debtOf(s) > 0}>
+          {authed && debtOf(s) > 0 && <ForgiveDebt />}
+        </Stat>
         <Stat label="Solved" value={`${t.solved}/150`} />
       </div>
 
@@ -183,13 +186,16 @@ export default async function Home() {
   );
 }
 
-function Stat({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
+function Stat({ label, value, accent, children }: {
+  label: string; value: string | number; accent?: boolean; children?: React.ReactNode;
+}) {
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900/40 px-4 py-3">
       <div className="text-xs text-neutral-500">{label}</div>
       <div className={`mt-0.5 text-xl font-semibold tabular-nums ${accent ? "text-amber-400" : ""}`}>
         {value}
       </div>
+      {children}
     </div>
   );
 }
