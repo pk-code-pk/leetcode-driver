@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { tokenValid } from "@/lib/auth";
 import { tick } from "@/lib/engine";
 
 export const dynamic = "force-dynamic";
@@ -7,8 +8,8 @@ export const maxDuration = 60;
 
 /** Manual/external trigger, for platforms without a long-running process. */
 export async function GET(req: Request) {
-  const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${process.env.DRIVER_TOKEN}`) {
+  const auth = req.headers.get("authorization") ?? "";
+  if (!auth.startsWith("Bearer ") || !tokenValid(auth.slice(7))) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
   await tick();

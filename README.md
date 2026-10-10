@@ -74,6 +74,9 @@ This is single-tenant by design: `settings` is one row, and `cards` / `attempts`
    node -e "for (const k of ['SECRET_KEY','TELEGRAM_WEBHOOK_SECRET','DRIVER_TOKEN']) \
      console.log(k + '=' + require('crypto').randomBytes(24).toString('base64url'))"
    ```
+   `DRIVER_TOKEN` takes a comma-separated list (`DRIVER_TOKEN=new,old`): any entry
+   is accepted, so you can switch to a new token without breaking the extension,
+   the cron, or signed-in browsers that still hold the old one. Drop it later.
 4. **Schema + data** — `npm run db:push && npm run seed` (~50s: 150 problems with
    live tags and official hints).
 5. **Deploy** — `npx vercel link` then `npx vercel deploy --prod`, and set the same
