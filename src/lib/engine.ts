@@ -424,7 +424,8 @@ async function escalate(s: Settings) {
   if (!row) {
     await db.insert(schema.days).values({ day, targetCount: target, debtAtStart: debtOf(s) }).onConflictDoNothing();
   }
-  const solved = row?.newCount ?? 0;
+  // Reviews count: a day spent clearing a backlog is a day's work.
+  const solved = row?.solvedCount ?? 0;
   const tierSent = row?.tierSent ?? 0;
   if (solved >= target) return;
 
@@ -468,8 +469,8 @@ async function closeDay(s: Settings) {
   // owed is simply the unmet part of it. Adding the old debt on top as well
   // doubled it every missed day.
   const target = dailyTarget(s, row);
-  const met = row.newCount >= target;
-  const debt = debtOf({ ...s, debt: target - row.newCount });
+  const met = row.solvedCount >= target;
+  const debt = debtOf({ ...s, debt: target - row.solvedCount });
   const streak = met ? s.streak + 1 : 0;
 
   await db.update(schema.days).set({ closed: true }).where(eq(schema.days.day, day));
@@ -479,8 +480,8 @@ async function closeDay(s: Settings) {
     await sendMessage(
       s.telegramChatId,
       met
-        ? `🌙 Day closed. ${row.newCount}/${target} new (${row.solvedCount} solved in all). Streak: <b>${streak}</b>.`
-        : `🌙 Day closed. ${row.newCount}/${target} new (${row.solvedCount} solved in all). Streak reset. Debt now <b>${debt}</b> — tomorrow's target is ${s.dailyNewTarget + debt}.`,
+        ? `🌙 Day closed. ${row.solvedCount}/${target} solved (${row.newCount} new). Streak: <b>${streak}</b>.`
+        : `🌙 Day closed. ${row.solvedCount}/${target} solved (${row.newCount} new). Streak reset. Debt now <b>${debt}</b> — tomorrow's target is ${s.dailyNewTarget + debt}.`,
       { silent: true },
     );
   }

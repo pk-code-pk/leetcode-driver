@@ -23,7 +23,7 @@ export async function GET(req: Request) {
   const [row] = await db.select().from(schema.days).where(eq(schema.days.day, day));
 
   const target = dailyTarget(s, row);
-  const solved = row?.newCount ?? 0;
+  const solved = row?.solvedCount ?? 0;
   const solvedAll = row?.solvedCount ?? 0;
   const next = await pickNext();
 

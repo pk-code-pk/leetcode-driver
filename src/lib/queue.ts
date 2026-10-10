@@ -1,7 +1,14 @@
-import { and, asc, eq, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, lte, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 
 export type Pick = { slug: string; title: string; difficulty: string; isReview: boolean };
+
+/**
+ * After this many reviews in a row, the next serve is a new problem even while
+ * reviews are still due, so a backlog slows progress through the list instead
+ * of stopping it.
+ */
+export const REVIEWS_PER_NEW = 2;
 
 /** A topic opens once its prerequisites are meaningfully underway. */
 const PREREQ_THRESHOLD = 0.6;
@@ -36,9 +43,20 @@ async function unlockedTopics(): Promise<Set<string>> {
   return unlocked;
 }
 
-/** Reviews always outrank new material — retention beats coverage. */
+/** Reviews come first, but every REVIEWS_PER_NEW of them a new problem cuts in. */
 export async function pickNext(): Promise<Pick | null> {
   const now = new Date();
+
+  const recent = await db
+    .select({ isReview: schema.attempts.isReview })
+    .from(schema.attempts)
+    .orderBy(desc(schema.attempts.servedAt))
+    .limit(REVIEWS_PER_NEW);
+  const newIsOwed = recent.length === REVIEWS_PER_NEW && recent.every((a) => a.isReview);
+  if (newIsOwed) {
+    const fresh = await nextNew();
+    if (fresh) return fresh;
+  }
 
   const due = await db
     .select({
@@ -53,7 +71,11 @@ export async function pickNext(): Promise<Pick | null> {
     .limit(1);
 
   if (due[0]) return { ...due[0], isReview: true };
+  return nextNew();
+}
 
+/** The first unseen problem in NeetCode 150 order, among topics that are open. */
+async function nextNew(): Promise<Pick | null> {
   const unlocked = await unlockedTopics();
   if (unlocked.size === 0) return null;
 
