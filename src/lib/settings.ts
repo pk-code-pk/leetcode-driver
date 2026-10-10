@@ -13,7 +13,7 @@ export async function getSettings(): Promise<Settings> {
 }
 
 /** Debt never exceeds this many days of target; past that the nag is noise. */
-export const MAX_DEBT_DAYS = 7;
+export const MAX_DEBT_DAYS = 2;
 
 /** Outstanding problems from missed days, capped so an old runaway value heals. */
 export const debtOf = (s: Settings) => Math.min(Math.max(0, s.debt), s.dailyNewTarget * MAX_DEBT_DAYS);

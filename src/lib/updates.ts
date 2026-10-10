@@ -3,7 +3,7 @@ import { db, schema } from "@/db";
 import { getSettings, updateSettings, dailyTarget, debtOf } from "@/lib/settings";
 import { answerCallback, sendMessage, esc } from "@/lib/telegram";
 import { getHint } from "@/lib/hints";
-import { serveNext, manualSolve } from "@/lib/engine";
+import { serveNext, manualSolve, forgiveDebt } from "@/lib/engine";
 import { schedule } from "@/lib/sm2";
 import { dueCount } from "@/lib/queue";
 
@@ -105,7 +105,7 @@ async function onMessage(msg: NonNullable<Update["message"]>) {
   }
 
   if (text.startsWith("/start")) {
-    await sendMessage(chatId, "Connected. I'll push problems on schedule.\n\n/next — serve one now\n/solved — mark the open one done\n/status — where you stand\n/pause · /resume");
+    await sendMessage(chatId, "Connected. I'll push problems on schedule.\n\n/next — serve one now\n/solved — mark the open one done\n/status — where you stand\n/forgive — clear your debt\n/pause · /resume");
     return;
   }
   if (text.startsWith("/next")) { await serveNext(); return; }
@@ -114,6 +114,11 @@ async function onMessage(msg: NonNullable<Update["message"]>) {
   if (text.startsWith("/solved") || text.startsWith("/done")) {
     const title = await manualSolve();
     if (!title) await sendMessage(chatId, "Nothing open. /next to start one.");
+    return;
+  }
+  if (text.startsWith("/forgive")) {
+    const was = await forgiveDebt();
+    await sendMessage(chatId, was ? `Debt of ${was} forgiven. Today's target is back to ${s.dailyNewTarget}.` : "No debt to forgive.");
     return;
   }
   if (text.startsWith("/pause")) { await updateSettings({ paused: true }); await sendMessage(chatId, "Paused. /resume when ready."); return; }

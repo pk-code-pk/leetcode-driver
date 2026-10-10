@@ -17,6 +17,18 @@ async function log(kind: string, slug?: string, data?: Record<string, unknown>) 
 
 const today = (s: Settings) => DateTime.now().setZone(s.timezone).toFormat("yyyy-LL-dd");
 
+/** Wipe the debt and drop today's sealed target back to the plain daily one. */
+export async function forgiveDebt(): Promise<number> {
+  const s = await getSettings();
+  const was = debtOf(s);
+  await updateSettings({ debt: 0 });
+  await db.update(schema.days)
+    .set({ targetCount: s.dailyNewTarget, debtAtStart: 0 })
+    .where(and(eq(schema.days.day, today(s)), eq(schema.days.closed, false)));
+  await log("debt_forgiven", undefined, { was });
+  return was;
+}
+
 function attemptButtons(slug: string, attemptId: string): Button[][] {
   return [
     [{ text: "▶︎  Open problem", url: problemUrl(slug) }],
