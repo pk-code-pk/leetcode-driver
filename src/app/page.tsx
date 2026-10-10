@@ -2,7 +2,7 @@ import { DateTime } from "luxon";
 import { desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getSettings, debtOf } from "@/lib/settings";
-import { dueCount, dueList } from "@/lib/queue";
+import { dueCount, dueList, upNext } from "@/lib/queue";
 import { problemUrl } from "@/lib/leetcode";
 import { siteAuthed } from "@/lib/auth";
 import { Console } from "@/components/Console";
@@ -42,6 +42,8 @@ export default async function Home() {
   const s = await getSettings();
   const due = await dueCount();
   const owed = authed ? await dueList() : [];
+  const queue = authed ? await upNext(10) : [];
+  const later = owed.filter((o) => !o.overdue);
   const totals = await db
     .select({
       solved: sql<number>`count(*)::int`,
@@ -102,21 +104,42 @@ export default async function Home() {
       {authed && (
         <section className="mt-10">
           <h2 className="text-sm font-medium text-neutral-300">
-            Due <span className="text-neutral-600">· {owed.filter((o) => o.overdue).length} now, {owed.filter((o) => !o.overdue).length} this week</span>
+            Up next <span className="text-neutral-600">· {owed.filter((o) => o.overdue).length} reviews due, a new one after every two</span>
           </h2>
           <ul className="mt-3 space-y-1.5">
-            {owed.map((o) => (
-              <li key={o.slug} className="flex items-center gap-3 text-sm">
-                <span className={`w-20 shrink-0 tabular-nums ${o.overdue ? "text-amber-400" : "text-neutral-600"}`}>
-                  {o.overdue ? "due now" : o.dueAt ? stamp(o.dueAt, s.timezone, "MM-dd") : ""}
+            {queue.map((q, i) => (
+              <li key={q.slug} className="flex items-center gap-3 text-sm">
+                <span className="w-5 shrink-0 tabular-nums text-neutral-600">{i + 1}</span>
+                <span className={`w-16 shrink-0 ${q.isReview ? "text-amber-400" : "text-emerald-400"}`}>
+                  {q.isReview ? "review" : "new"}
                 </span>
-                <span className="flex-1 truncate text-neutral-300">{o.title}</span>
-                <span className="w-16 shrink-0 text-neutral-600">{o.difficulty}</span>
-                <StartButton slug={o.slug} url={problemUrl(o.slug)} />
+                <span className="flex-1 truncate text-neutral-300">{q.title}</span>
+                <span className="w-16 shrink-0 text-neutral-600">{q.difficulty}</span>
+                <StartButton slug={q.slug} url={problemUrl(q.slug)} />
               </li>
             ))}
-            {owed.length === 0 && <li className="text-neutral-600">no reviews due</li>}
+            {queue.length === 0 && <li className="text-neutral-600">nothing left to serve</li>}
           </ul>
+
+          {later.length > 0 && (
+            <>
+              <h2 className="mt-8 text-sm font-medium text-neutral-300">
+                Reviews later this week <span className="text-neutral-600">· {later.length}</span>
+              </h2>
+              <ul className="mt-3 space-y-1.5">
+                {later.map((o) => (
+                  <li key={o.slug} className="flex items-center gap-3 text-sm">
+                    <span className="w-20 shrink-0 tabular-nums text-neutral-600">
+                      {o.dueAt ? stamp(o.dueAt, s.timezone, "MM-dd") : ""}
+                    </span>
+                    <span className="flex-1 truncate text-neutral-300">{o.title}</span>
+                    <span className="w-16 shrink-0 text-neutral-600">{o.difficulty}</span>
+                    <StartButton slug={o.slug} url={problemUrl(o.slug)} />
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </section>
       )}
 

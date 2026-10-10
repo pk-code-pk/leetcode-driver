@@ -43,18 +43,24 @@ async function unlockedTopics(): Promise<Set<string>> {
   return unlocked;
 }
 
+/** How many of the latest attempts were reviews, counting back to the last new one. */
+async function reviewsInARow(): Promise<number> {
+  const recent = await db
+    .select({ isReview: schema.attempts.isReview })
+    .from(schema.attempts)
+    .where(eq(schema.attempts.abandoned, false))
+    .orderBy(desc(schema.attempts.servedAt))
+    .limit(REVIEWS_PER_NEW);
+  const firstNew = recent.findIndex((a) => !a.isReview);
+  return firstNew === -1 ? recent.length : firstNew;
+}
+
 /** Reviews come first, but every REVIEWS_PER_NEW of them a new problem cuts in. */
 export async function pickNext(): Promise<Pick | null> {
   const now = new Date();
 
-  const recent = await db
-    .select({ isReview: schema.attempts.isReview })
-    .from(schema.attempts)
-    .orderBy(desc(schema.attempts.servedAt))
-    .limit(REVIEWS_PER_NEW);
-  const newIsOwed = recent.length === REVIEWS_PER_NEW && recent.every((a) => a.isReview);
-  if (newIsOwed) {
-    const fresh = await nextNew();
+  if ((await reviewsInARow()) >= REVIEWS_PER_NEW) {
+    const [fresh] = await newProblems(1);
     if (fresh) return fresh;
   }
 
@@ -71,13 +77,39 @@ export async function pickNext(): Promise<Pick | null> {
     .limit(1);
 
   if (due[0]) return { ...due[0], isReview: true };
-  return nextNew();
+  const [fresh] = await newProblems(1);
+  return fresh ?? null;
 }
 
-/** The first unseen problem in NeetCode 150 order, among topics that are open. */
-async function nextNew(): Promise<Pick | null> {
+/**
+ * The order pickNext will serve things in, assuming each is solved as served:
+ * the same two-reviews-then-a-new rhythm, over what is due now and the next
+ * new problems in NeetCode 150 order.
+ */
+export async function upNext(limit = 12): Promise<(Pick & { dueAt: Date | null })[]> {
+  const now = new Date();
+  const due = (await dueList(0)).filter((d) => d.overdue);
+  const fresh = await newProblems(limit);
+  let inARow = await reviewsInARow();
+
+  const out: (Pick & { dueAt: Date | null })[] = [];
+  while (out.length < limit && (due.length || fresh.length)) {
+    if (fresh.length && (inARow >= REVIEWS_PER_NEW || !due.length)) {
+      out.push({ ...fresh.shift()!, dueAt: null });
+      inARow = 0;
+    } else {
+      const r = due.shift()!;
+      out.push({ slug: r.slug, title: r.title, difficulty: r.difficulty, isReview: true, dueAt: r.dueAt ?? now });
+      inARow += 1;
+    }
+  }
+  return out;
+}
+
+/** The next unseen problems in NeetCode 150 order, among topics that are open. */
+async function newProblems(n: number): Promise<Pick[]> {
   const unlocked = await unlockedTopics();
-  if (unlocked.size === 0) return null;
+  if (unlocked.size === 0) return [];
 
   const fresh = await db
     .select({
@@ -95,9 +127,9 @@ async function nextNew(): Promise<Pick | null> {
       ),
     )
     .orderBy(asc(schema.problems.topicOrder), asc(schema.problems.orderInTopic))
-    .limit(1);
+    .limit(n);
 
-  return fresh[0] ? { ...fresh[0], isReview: false } : null;
+  return fresh.map((f) => ({ ...f, isReview: false }));
 }
 
 /** How many reviews are already overdue — drives the escalation copy. */
