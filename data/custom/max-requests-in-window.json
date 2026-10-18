@@ -1,0 +1,28 @@
+{
+  "slug": "max-requests-in-window",
+  "title": "Max Requests in a Time Window",
+  "difficulty": "Medium",
+  "category": "OA",
+  "tags": ["Array", "Sorting", "Sliding Window"],
+  "statement": "You are given an array `timestamps` of request times (unsorted, values may repeat) and an integer `window`.\n\nReturn the **maximum number of requests** that fall inside any single time interval of length `window` — that is, the size of the largest group of requests whose latest and earliest timestamps differ by at most `window`.\n\n## Example 1\n```\nInput:  timestamps = [1, 2, 3, 10, 11], window = 5\nOutput: 3\n```\n- Requests at 1, 2 and 3 fit in [1, 6]. 10 and 11 are too far away.\n\n## Example 2\n```\nInput:  timestamps = [1, 12, 3, 6, 8, 7], window = 4\nOutput: 3\n```\n- Sorted: 1, 3, 6, 7, 8, 12. The interval [4, 8] holds 6, 7 and 8.\n\n## Example 3\n```\nInput:  timestamps = [0, 5], window = 5\nOutput: 2\n```\n- The interval is inclusive at both ends.\n\n## Constraints\n- `1 <= timestamps.length <= 10^5`\n- `0 <= timestamps[i] <= 10^9`\n- `0 <= window <= 10^9`",
+  "functionName": "maxRequests",
+  "params": ["timestamps", "window"],
+  "starterCode": {
+    "python": "class Solution:\n    def maxRequests(self, timestamps: list[int], window: int) -> int:\n        pass\n"
+  },
+  "tests": [
+    { "args": { "timestamps": [1, 2, 3, 10, 11], "window": 5 }, "expected": 3 },
+    { "args": { "timestamps": [1, 12, 3, 6, 8, 7], "window": 4 }, "expected": 3 },
+    { "args": { "timestamps": [0, 5], "window": 5 }, "expected": 2 },
+    { "args": { "timestamps": [4, 4, 4], "window": 0 }, "expected": 3 },
+    { "args": { "timestamps": [5, 1, 3], "window": 2 }, "expected": 2 },
+    { "args": { "timestamps": [7], "window": 3 }, "expected": 1 },
+    { "args": { "timestamps": [1, 10, 20], "window": 0 }, "expected": 1 }
+  ],
+  "hints": [
+    "The order the requests arrive in doesn't matter — only their values do. What makes \"within window of each other\" easy to check?",
+    "After sorting, any best group is a contiguous run. Grow a right pointer and shrink a left pointer while the run spans more than window.",
+    "Answer = max(r - l + 1) over every r, where l is the first index with timestamps[r] - timestamps[l] <= window. O(n log n) for the sort, O(n) for the scan."
+  ],
+  "solution": "class Solution:\n    def maxRequests(self, timestamps: list[int], window: int) -> int:\n        timestamps.sort()\n        l = r = 0\n        best = 0\n        while r < len(timestamps):\n            while timestamps[r] - timestamps[l] > window:\n                l += 1\n            best = max(best, r - l + 1)\n            r += 1\n        return best\n"
+}

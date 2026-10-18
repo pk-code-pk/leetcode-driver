@@ -187,6 +187,22 @@ a demand. See `extension/README.md` to install.
   Still extension-only: the LeetCode session sync (HttpOnly cookie) and auto-detecting a
   solve / capturing your code from the editor — on the site, press **Solved** yourself.
 
+## Custom & OA questions
+
+**`/ide`** is a menu of questions that aren't on LeetCode (OA questions, your own),
+grouped by category, each with a LeetCode-style workspace: statement / hints /
+solution on the left, a Monaco editor on the right, and the stored tests run against
+your code with Ctrl/⌘+Enter. The layout and problem shape are borrowed from
+[cojudge][cj] (MIT). The difference is where code runs: cojudge judges in Docker,
+which a serverless deploy can't do, so here Python runs in the browser via Pyodide in
+a Web Worker (10s time limit; a runaway loop gets the worker killed and restarted).
+Your code is kept in `localStorage` per question.
+
+To add a question, copy `data/custom/max-requests-in-window.json`, edit it, and list
+it in `src/lib/custom.ts`. Tests carry their expected output; `functionName` is called
+as `Solution().<functionName>(*args)` with `args` taken in `params` order. These
+questions aren't in the spaced-repetition queue: that tracks solves on LeetCode.
+
 ## Commands
 
 `/next` serve one now · `/status` where you stand · `/pause` · `/resume`
@@ -201,3 +217,4 @@ The NeetCode 150 dataset and the anti-pileup lapse tweak are adapted from
 [pb]: https://pattern-bank.vercel.app/
 [gr]: https://github.com/brandon-gong/grind
 [gs]: https://github.com/JMoooore/GoStudyNeetCode
+[cj]: https://github.com/cojudge/cojudge

@@ -146,9 +146,14 @@ export default async function Home() {
       <section className="mt-10">
         <div className="flex items-baseline justify-between">
           <h2 className="text-sm font-medium text-neutral-300">Coverage</h2>
-          <a href="/learn" className="text-xs text-neutral-500 hover:text-emerald-400">
-            learn the patterns →
-          </a>
+          <span className="flex gap-4">
+            <a href="/ide" className="text-xs text-neutral-500 hover:text-emerald-400">
+              custom & OA questions →
+            </a>
+            <a href="/learn" className="text-xs text-neutral-500 hover:text-emerald-400">
+              learn the patterns →
+            </a>
+          </span>
         </div>
         <ul className="mt-3 space-y-1.5">
           {byTopic.map((row) => (
