@@ -39,7 +39,7 @@ export async function GET(req: Request) {
         slug: attempt.slug,
         // The page knows itself by NeetCode's slug when it's hosted there.
         neetcodeSlug: PREMIUM_ON_NEETCODE[attempt.slug] ?? null,
-        url: problemUrl(attempt.slug),
+        url: problemUrl(attempt.slug, new URL(req.url).origin),
         title: p?.title ?? attempt.slug,
         difficulty: p?.difficulty ?? "Medium",
         isReview: attempt.isReview,

@@ -11,14 +11,15 @@ export const dynamic = "force-dynamic";
  * The entire interface: one bookmark that redirects straight to whatever you
  * should be solving. Never renders a page, never asks you to choose.
  */
-export async function GET() {
+export async function GET(req: Request) {
+  const origin = new URL(req.url).origin;
   const existing = await openAttempt();
   if (existing) {
     if (!existing.openedAt) {
       // First open starts the clock the rescue timer and grading read from.
       await db.update(schema.attempts).set({ openedAt: new Date() }).where(eq(schema.attempts.id, existing.id));
     }
-    return NextResponse.redirect(problemUrl(existing.slug), 302);
+    return NextResponse.redirect(problemUrl(existing.slug, origin), 302);
   }
 
   const pick = await pickNext();
@@ -27,5 +28,5 @@ export async function GET() {
   await serveNext();
   const opened = await openAttempt();
   if (opened) await db.update(schema.attempts).set({ openedAt: new Date() }).where(eq(schema.attempts.id, opened.id));
-  return NextResponse.redirect(problemUrl(pick.slug), 302);
+  return NextResponse.redirect(problemUrl(pick.slug, origin), 302);
 }

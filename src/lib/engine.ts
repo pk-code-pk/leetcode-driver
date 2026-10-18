@@ -30,8 +30,11 @@ export async function forgiveDebt(): Promise<number> {
 }
 
 function attemptButtons(slug: string, attemptId: string): Button[][] {
+  // A custom question's link is only absolute when PUBLIC_URL is set, and
+  // Telegram rejects the whole message over a relative button URL.
+  const url = problemUrl(slug);
   return [
-    [{ text: "▶︎  Open problem", url: problemUrl(slug) }],
+    ...(url.startsWith("http") ? [[{ text: "▶︎  Open problem", url }]] : []),
     [
       { text: "💡 Stuck", callback_data: `hint:${attemptId}` },
       { text: "⏭ Skip", callback_data: `skip:${attemptId}` },

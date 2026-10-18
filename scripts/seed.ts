@@ -2,6 +2,8 @@ import "dotenv/config";
 import { readFileSync } from "fs";
 import { db, schema } from "../src/db";
 import { problemUrl, questionMeta } from "../src/lib/leetcode";
+import { syncCustomProblems } from "../src/lib/customSync";
+import { customProblems } from "../src/lib/custom";
 
 type Data = {
   topics: {
@@ -58,7 +60,9 @@ async function main() {
   }
 
   await db.insert(schema.settings).values({ id: 1 }).onConflictDoNothing();
+  await syncCustomProblems();
   console.log(`seeded ${data.topics.length} topics, ${n} problems, ${tagged} tagged, ${hinted} with official hints`);
+  console.log(`synced ${customProblems.length} custom question(s)`);
   process.exit(0);
 }
 

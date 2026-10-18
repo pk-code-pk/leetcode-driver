@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   // open attempt is what you should be looking at.
   const a = await openAttempt();
   if (!a) return NextResponse.json({ ok: true, url: null }, { headers: cors(req) });
-  return NextResponse.json({ ok: true, slug: a.slug, url: problemUrl(a.slug) }, { headers: cors(req) });
+  return NextResponse.json({ ok: true, slug: a.slug, url: problemUrl(a.slug, new URL(req.url).origin) }, { headers: cors(req) });
 }
 
 function cors(req?: Request) {

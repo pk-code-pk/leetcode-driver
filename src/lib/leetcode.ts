@@ -1,3 +1,5 @@
+import { customProblem } from "./custom";
+
 const ENDPOINT = "https://leetcode.com/graphql";
 
 export type Auth = { session: string; csrf: string } | null;
@@ -144,7 +146,15 @@ export const PREMIUM_ON_NEETCODE: Record<string, string> = {
 
 export const isPremium = (slug: string) => slug in PREMIUM_ON_NEETCODE;
 
-export const problemUrl = (slug: string) =>
-  isPremium(slug)
-    ? `https://neetcode.io/problems/${PREMIUM_ON_NEETCODE[slug]}`
-    : `https://leetcode.com/problems/${slug}/`;
+/**
+ * Custom questions are solved in this app's own IDE, so their link is on this
+ * host: a route handler passes its request origin, which keeps the link absolute
+ * for the extension and redirects. Elsewhere it falls back to PUBLIC_URL, and
+ * without that to a relative path, which only a page on the site can follow.
+ */
+export const problemUrl = (slug: string, base = process.env.PUBLIC_URL ?? "") =>
+  customProblem(slug)
+    ? `${base.replace(/\/$/, "")}/ide/${slug}`
+    : isPremium(slug)
+      ? `https://neetcode.io/problems/${PREMIUM_ON_NEETCODE[slug]}`
+      : `https://leetcode.com/problems/${slug}/`;

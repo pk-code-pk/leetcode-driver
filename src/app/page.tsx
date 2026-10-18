@@ -44,6 +44,7 @@ export default async function Home() {
   const owed = authed ? await dueList() : [];
   const queue = authed ? await upNext(10) : [];
   const later = owed.filter((o) => !o.overdue);
+  const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(schema.problems);
   const totals = await db
     .select({
       solved: sql<number>`count(*)::int`,
@@ -96,7 +97,7 @@ export default async function Home() {
         <Stat label="Debt" value={debtOf(s)} accent={debtOf(s) > 0}>
           {authed && debtOf(s) > 0 && <ForgiveDebt />}
         </Stat>
-        <Stat label="Solved" value={`${t.solved}/150`} />
+        <Stat label="Solved" value={`${t.solved}/${total}`} />
       </div>
 
       {authed && <Console />}
@@ -146,9 +147,14 @@ export default async function Home() {
       <section className="mt-10">
         <div className="flex items-baseline justify-between">
           <h2 className="text-sm font-medium text-neutral-300">Coverage</h2>
-          <a href="/learn" className="text-xs text-neutral-500 hover:text-emerald-400">
-            learn the patterns →
-          </a>
+          <span className="flex gap-4">
+            <a href="/ide" className="text-xs text-neutral-500 hover:text-emerald-400">
+              custom & OA questions →
+            </a>
+            <a href="/learn" className="text-xs text-neutral-500 hover:text-emerald-400">
+              learn the patterns →
+            </a>
+          </span>
         </div>
         <ul className="mt-3 space-y-1.5">
           {byTopic.map((row) => (

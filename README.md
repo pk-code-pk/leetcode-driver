@@ -187,6 +187,33 @@ a demand. See `extension/README.md` to install.
   Still extension-only: the LeetCode session sync (HttpOnly cookie) and auto-detecting a
   solve / capturing your code from the editor — on the site, press **Solved** yourself.
 
+## Custom & OA questions
+
+**`/ide`** is a menu of questions that aren't on LeetCode (OA questions, your own),
+grouped by category, each with a LeetCode-style workspace: statement / hints /
+solution on the left, a Monaco editor on the right, and the stored tests run against
+your code with Ctrl/⌘+Enter. The layout and problem shape are borrowed from
+[cojudge][cj] (MIT). The difference is where code runs: cojudge judges in Docker,
+which a serverless deploy can't do, so here Python runs in the browser via Pyodide in
+a Web Worker (10s time limit; a runaway loop gets the worker killed and restarted).
+Your code is kept in `localStorage` per question.
+
+They are full members of the spaced-repetition queue. Each category becomes a topic
+(`custom:oa`, …) with no prerequisites, ordered ahead of the NeetCode topics, so a
+question you add is served as the next new problem; after that it is reviewed on the
+same SM-2 schedule. The IDE stands in for LeetCode plus the extension: with the clock
+on the question, a run that isn't accepted counts as a failed submission, hints climb
+the same ladder (your `hints` first, then generated from the statement), the reference
+solution is hidden, and an accepted run is the solve that grades and reschedules it —
+followed by the same notes box. Without the clock running, nothing is recorded. Links
+everywhere (Telegram, `/next`, the new tab) point at `/ide/<slug>`; Telegram needs
+`PUBLIC_URL` set to show the button.
+
+To add a question, copy `data/custom/max-requests-in-window.json`, edit it, and list
+it in `src/lib/custom.ts`. Tests carry their expected output; `functionName` is called
+as `Solution().<functionName>(*args)` with `args` taken in `params` order. The catalog
+picks it up on the next deploy without a re-seed; the slug must not be a LeetCode one.
+
 ## Commands
 
 `/next` serve one now · `/status` where you stand · `/pause` · `/resume`
@@ -201,3 +228,4 @@ The NeetCode 150 dataset and the anti-pileup lapse tweak are adapted from
 [pb]: https://pattern-bank.vercel.app/
 [gr]: https://github.com/brandon-gong/grind
 [gs]: https://github.com/JMoooore/GoStudyNeetCode
+[cj]: https://github.com/cojudge/cojudge

@@ -38,7 +38,7 @@ export async function GET(req: Request) {
       due: await dueCount(),
       streak: s.streak,
       debt: debtOf(s),
-      next: next && { ...next, url: problemUrl(next.slug) },
+      next: next && { ...next, url: problemUrl(next.slug, url.origin) },
     },
     { headers: cors },
   );
