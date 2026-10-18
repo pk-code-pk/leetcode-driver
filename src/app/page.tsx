@@ -44,6 +44,7 @@ export default async function Home() {
   const owed = authed ? await dueList() : [];
   const queue = authed ? await upNext(10) : [];
   const later = owed.filter((o) => !o.overdue);
+  const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(schema.problems);
   const totals = await db
     .select({
       solved: sql<number>`count(*)::int`,
@@ -96,7 +97,7 @@ export default async function Home() {
         <Stat label="Debt" value={debtOf(s)} accent={debtOf(s) > 0}>
           {authed && debtOf(s) > 0 && <ForgiveDebt />}
         </Stat>
-        <Stat label="Solved" value={`${t.solved}/150`} />
+        <Stat label="Solved" value={`${t.solved}/${total}`} />
       </div>
 
       {authed && <Console />}

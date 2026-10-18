@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authorized } from "@/lib/auth";
+import { syncCustomProblems } from "@/lib/customSync";
 import { manualSolve } from "@/lib/engine";
 import { PREMIUM_ON_NEETCODE } from "@/lib/leetcode";
 
@@ -53,6 +54,7 @@ export async function POST(req: Request) {
   const mins = Number(body.durationMin);
   const durationSec = body.durationMin != null && mins > 0 && mins < 600 ? Math.round(mins * 60) : undefined;
 
+  await syncCustomProblems();
   const title = await manualSolve({
     expectSlug: slug,
     solvedAt,
@@ -60,7 +62,11 @@ export async function POST(req: Request) {
     failedSubmissions: body.failedSubmissions,
     code: body.code ?? null,
     lang: body.lang ?? null,
-    source: body.host === "neetcode" ? "page:neetcode" : body.host === "site" ? "site" : "page:leetcode",
+    source:
+      body.host === "neetcode" ? "page:neetcode"
+      : body.host === "site" ? "site"
+      : body.host === "ide" ? "ide"
+      : "page:leetcode",
   });
 
   // Not an error: you solved something the driver hadn't served.

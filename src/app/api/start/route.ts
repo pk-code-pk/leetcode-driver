@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authorized } from "@/lib/auth";
+import { syncCustomProblems } from "@/lib/customSync";
 import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
@@ -34,9 +35,10 @@ export async function POST(req: Request) {
   const slug = FROM_NEETCODE[raw] ?? raw;
   if (!slug) return NextResponse.json({ ok: false, error: "no slug" }, { status: 400, headers: cors(req) });
 
+  await syncCustomProblems();
   const [problem] = await db.select().from(schema.problems).where(eq(schema.problems.slug, slug));
   if (!problem) {
-    // Not part of the NeetCode 150 — nothing to track, and that's fine.
+    // Not in the catalog — nothing to track, and that's fine.
     return NextResponse.json({ ok: true, tracked: false }, { headers: cors(req) });
   }
 

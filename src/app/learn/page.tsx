@@ -33,6 +33,8 @@ export default async function Learn({
     .from(schema.topics)
     .leftJoin(schema.problems, eq(schema.problems.topic, schema.topics.key))
     .leftJoin(schema.cards, eq(schema.cards.slug, schema.problems.slug))
+    // A custom category is a grab bag, not a pattern, so it has no lesson to show.
+    .where(sql`${schema.topics.key} not like 'custom:%'`)
     .groupBy(schema.topics.key, schema.topics.label, schema.topics.order)
     .orderBy(asc(schema.topics.order));
 

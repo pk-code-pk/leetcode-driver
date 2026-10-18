@@ -198,10 +198,21 @@ which a serverless deploy can't do, so here Python runs in the browser via Pyodi
 a Web Worker (10s time limit; a runaway loop gets the worker killed and restarted).
 Your code is kept in `localStorage` per question.
 
+They are full members of the spaced-repetition queue. Each category becomes a topic
+(`custom:oa`, …) with no prerequisites, ordered ahead of the NeetCode topics, so a
+question you add is served as the next new problem; after that it is reviewed on the
+same SM-2 schedule. The IDE stands in for LeetCode plus the extension: with the clock
+on the question, a run that isn't accepted counts as a failed submission, hints climb
+the same ladder (your `hints` first, then generated from the statement), the reference
+solution is hidden, and an accepted run is the solve that grades and reschedules it —
+followed by the same notes box. Without the clock running, nothing is recorded. Links
+everywhere (Telegram, `/next`, the new tab) point at `/ide/<slug>`; Telegram needs
+`PUBLIC_URL` set to show the button.
+
 To add a question, copy `data/custom/max-requests-in-window.json`, edit it, and list
 it in `src/lib/custom.ts`. Tests carry their expected output; `functionName` is called
-as `Solution().<functionName>(*args)` with `args` taken in `params` order. These
-questions aren't in the spaced-repetition queue: that tracks solves on LeetCode.
+as `Solution().<functionName>(*args)` with `args` taken in `params` order. The catalog
+picks it up on the next deploy without a re-seed; the slug must not be a LeetCode one.
 
 ## Commands
 

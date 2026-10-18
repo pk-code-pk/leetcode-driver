@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, isNull, lte, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { syncCustomProblems } from "./customSync";
 
 export type Pick = { slug: string; title: string; difficulty: string; isReview: boolean };
 
@@ -14,6 +15,8 @@ export const REVIEWS_PER_NEW = 2;
 const PREREQ_THRESHOLD = 0.6;
 
 async function unlockedTopics(): Promise<Set<string>> {
+  // Every path that picks a new problem passes through here.
+  await syncCustomProblems();
   const topicRows = await db.select().from(schema.topics).orderBy(asc(schema.topics.order));
 
   const progress = await db

@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { customProblem } from "./custom";
 
 /** Override if you want a cheaper or newer model; verified at call time. */
 const MODEL = process.env.OPENAI_MODEL || "gpt-5.6-terra";
@@ -73,6 +74,14 @@ export async function getHint(opts: {
 <a href="${search}">NeetCode walkthrough →</a>`, source: "link", html: true };
 }
 
+/** A LeetCode problem is known by its link; a custom one only by its statement. */
+function problemContext(title: string, slug: string): string {
+  const custom = customProblem(slug);
+  return custom
+    ? `Problem: "${title}" (not on LeetCode)\n\n${custom.statement}`
+    : `Problem: "${title}" (leetcode.com/problems/${slug}/)`;
+}
+
 /**
  * Returns null when generation is unavailable so callers can fall back rather
  * than surface an error to the phone.
@@ -85,7 +94,7 @@ export async function generateHint(title: string, slug: string, level: number): 
       "You are a LeetCode coach helping someone who is stuck mid-attempt. " +
         "Escalate hints slowly. Never reveal a full working solution, even if asked. " +
         "Be terse — this is read on a phone lock screen.",
-      `Problem: "${title}" (leetcode.com/problems/${slug}/)\n\nHint level ${level}. ${instruction}`,
+      `${problemContext(title, slug)}\n\nHint level ${level}. ${instruction}`,
       2000,
     );
     return text || null;
