@@ -2,7 +2,7 @@ import { DateTime } from "luxon";
 import { desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getSettings, debtOf } from "@/lib/settings";
-import { dueCount, dueList, upNext } from "@/lib/queue";
+import { dueCount, dueList, upNext, REVIEWS_PER_NEW } from "@/lib/queue";
 import { problemUrl } from "@/lib/leetcode";
 import { siteAuthed } from "@/lib/auth";
 import { Console } from "@/components/Console";
@@ -44,7 +44,11 @@ export default async function Home() {
   // Every scheduled review, not just this week's: a second good solve lands
   // 8–21 days out, and a review you can't see looks like one that was lost.
   const owed = authed ? await dueList(null) : [];
-  const queue = authed ? await upNext(10) : [];
+  // Long enough to reach every overdue review, plus the new problems the rhythm
+  // mixes in. A fixed 10 hid most of a backlog: the oldest-due reviews filled it,
+  // and recent solves that had come due were queued but nowhere on the page.
+  const overdueN = owed.filter((o) => o.overdue).length;
+  const queue = authed ? await upNext(Math.max(10, overdueN + Math.ceil(overdueN / REVIEWS_PER_NEW) + 1)) : [];
   const later = owed.filter((o) => !o.overdue);
   const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(schema.problems);
   const totals = await db
