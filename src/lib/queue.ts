@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { syncCustomProblems } from "./customSync";
 
@@ -154,10 +154,10 @@ export async function openAttempt() {
   return rows[0] ?? null;
 }
 
-/** What is owed now, plus what comes due in the next week. */
-export async function dueList(horizonDays = 7) {
+/** What is owed now, plus what comes due within the horizon (null: everything scheduled). */
+export async function dueList(horizonDays: number | null = 7) {
   const now = new Date();
-  const horizon = new Date(now.getTime() + horizonDays * 86_400_000);
+  const horizon = horizonDays == null ? null : new Date(now.getTime() + horizonDays * 86_400_000);
   // `lte` encodes the Date through the column; a Date inside a raw sql`` fragment
   // reaches postgres-js unencoded and throws ERR_INVALID_ARG_TYPE.
   const rows = await db
@@ -169,7 +169,10 @@ export async function dueList(horizonDays = 7) {
     })
     .from(schema.cards)
     .innerJoin(schema.problems, eq(schema.problems.slug, schema.cards.slug))
-    .where(and(lte(schema.cards.dueAt, horizon), sql`${schema.cards.state} <> 'buried'`))
+    .where(and(
+      horizon ? lte(schema.cards.dueAt, horizon) : isNotNull(schema.cards.dueAt),
+      sql`${schema.cards.state} <> 'buried'`,
+    ))
     .orderBy(asc(schema.cards.dueAt));
   return rows.map((r) => ({ ...r, overdue: Boolean(r.dueAt && r.dueAt <= now) }));
 }

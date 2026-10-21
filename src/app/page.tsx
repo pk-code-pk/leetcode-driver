@@ -2,7 +2,7 @@ import { DateTime } from "luxon";
 import { desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getSettings, debtOf } from "@/lib/settings";
-import { dueCount, dueList, upNext } from "@/lib/queue";
+import { dueCount, dueList, upNext, REVIEWS_PER_NEW } from "@/lib/queue";
 import { problemUrl } from "@/lib/leetcode";
 import { siteAuthed } from "@/lib/auth";
 import { Console } from "@/components/Console";
@@ -41,8 +41,14 @@ export default async function Home() {
   const authed = await siteAuthed();
   const s = await getSettings();
   const due = await dueCount();
-  const owed = authed ? await dueList() : [];
-  const queue = authed ? await upNext(10) : [];
+  // Every scheduled review, not just this week's: a second good solve lands
+  // 8–21 days out, and a review you can't see looks like one that was lost.
+  const owed = authed ? await dueList(null) : [];
+  // Long enough to reach every overdue review, plus the new problems the rhythm
+  // mixes in. A fixed 10 hid most of a backlog: the oldest-due reviews filled it,
+  // and recent solves that had come due were queued but nowhere on the page.
+  const overdueN = owed.filter((o) => o.overdue).length;
+  const queue = authed ? await upNext(Math.max(10, overdueN + Math.ceil(overdueN / REVIEWS_PER_NEW) + 1)) : [];
   const later = owed.filter((o) => !o.overdue);
   const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(schema.problems);
   const totals = await db
@@ -55,12 +61,14 @@ export default async function Home() {
   const byTopic = await db
     .select({
       topic: schema.problems.topic,
+      label: sql<string>`coalesce(${schema.topics.label}, ${schema.problems.topic})`,
       total: sql<number>`count(*)::int`,
       done: sql<number>`count(${schema.cards.slug})::int`,
     })
     .from(schema.problems)
     .leftJoin(schema.cards, sql`${schema.cards.slug} = ${schema.problems.slug}`)
-    .groupBy(schema.problems.topic, schema.problems.topicOrder)
+    .leftJoin(schema.topics, eq(schema.topics.key, schema.problems.topic))
+    .groupBy(schema.problems.topic, schema.problems.topicOrder, schema.topics.label)
     .orderBy(schema.problems.topicOrder);
   // Per problem, not per event: the raw feed repeated every resubmit and never
   // said how any of it went.
@@ -125,13 +133,15 @@ export default async function Home() {
           {later.length > 0 && (
             <>
               <h2 className="mt-8 text-sm font-medium text-neutral-300">
-                Reviews later this week <span className="text-neutral-600">· {later.length}</span>
+                Scheduled reviews <span className="text-neutral-600">· {later.length}</span>
               </h2>
               <ul className="mt-3 space-y-1.5">
                 {later.map((o) => (
                   <li key={o.slug} className="flex items-center gap-3 text-sm">
-                    <span className="w-20 shrink-0 tabular-nums text-neutral-600">
-                      {o.dueAt ? stamp(o.dueAt, s.timezone, "MM-dd") : ""}
+                    <span className="w-28 shrink-0 tabular-nums text-neutral-600">
+                      {o.dueAt
+                        ? `${stamp(o.dueAt, s.timezone, "MM-dd")} · in ${Math.max(1, Math.ceil((o.dueAt.getTime() - Date.now()) / 86_400_000))}d`
+                        : ""}
                     </span>
                     <span className="flex-1 truncate text-neutral-300">{o.title}</span>
                     <span className="w-16 shrink-0 text-neutral-600">{o.difficulty}</span>
@@ -159,7 +169,7 @@ export default async function Home() {
         <ul className="mt-3 space-y-1.5">
           {byTopic.map((row) => (
             <li key={row.topic} className="flex items-center gap-3 text-sm">
-              <span className="w-44 shrink-0 truncate text-neutral-400">{row.topic}</span>
+              <span className="w-44 shrink-0 truncate text-neutral-400">{row.label}</span>
               <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-neutral-800">
                 <span
                   className="block h-full rounded-full bg-emerald-500"
