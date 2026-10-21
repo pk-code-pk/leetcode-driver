@@ -78,13 +78,25 @@ async function onCallback(cb: NonNullable<Update["callback_query"]>) {
     const [card] = await db.select().from(schema.cards).where(eq(schema.cards.slug, slug));
     if (!card) return answerCallback(cb.id, "No card for that problem.");
 
+    // Replace the solve's grade, don't add a second review on top of it: replay
+    // from the pre-solve snapshot, as the notes regrade does. Scheduling from the
+    // current state counted the attempt twice, so "Too easy" overshot the interval.
+    // Cards solved before the snapshot existed have none, and keep the old path.
+    const pre = card.preEase != null;
     const next = schedule(
-      { ease: card.ease, intervalDays: card.intervalDays, reps: card.reps, lapses: card.lapses },
+      pre
+        ? { ease: card.preEase!, intervalDays: card.preIntervalDays ?? 0, reps: card.preReps ?? 0, lapses: card.preLapses ?? 0 }
+        : { ease: card.ease, intervalDays: card.intervalDays, reps: card.reps, lapses: card.lapses },
       grade,
-      new Date(),
+      pre ? (card.lastSolvedAt ?? new Date()) : new Date(),
     );
     await db.update(schema.cards)
-      .set({ ...next, lastGrade: grade, lastGradeSource: "manual" })
+      .set({
+        ...next,
+        lastGrade: grade,
+        lastGradeSource: "manual",
+        gradeSummary: grade >= 4 ? "you marked it too easy" : "you marked it too hard",
+      })
       .where(eq(schema.cards.slug, slug));
     await answerCallback(cb.id, `Rescheduled: ${next.intervalDays}d`);
     return;
