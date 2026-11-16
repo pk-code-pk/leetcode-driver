@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser, homeFor } from "@/lib/auth";
+import { Page } from "@/components/ui";
 
 export default async function SignUpChooser() {
   const user = await currentUser();
   if (user) redirect(homeFor(user.role));
   return (
-    <div className="mx-auto max-w-2xl">
-      <h1 className="text-center text-3xl font-black tracking-tight">How do you want to use JobsU?</h1>
+    <Page>
+     <div className="mx-auto max-w-2xl">
+      <p className="eyebrow text-center">Get started</p>
+      <h1 className="title mt-2 text-center">How do you want to use JobsU?</h1>
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         <Link href="/sign-up/resident" className="card hover:border-blue">
           <p className="text-3xl">🏡</p>
@@ -32,6 +35,7 @@ export default async function SignUpChooser() {
           Log in
         </Link>
       </p>
-    </div>
+     </div>
+    </Page>
   );
 }

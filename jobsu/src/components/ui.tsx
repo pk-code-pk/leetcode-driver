@@ -62,20 +62,30 @@ export function EduBadge() {
   return <span className="badge bg-green-bg text-green-deep">✓ .edu-confirmed</span>;
 }
 
+/** Standard page container. `narrow` suits forms, as on jobsu.app. */
+export function Page({ children, narrow }: { children: React.ReactNode; narrow?: boolean }) {
+  return <div className={`mx-auto px-5 py-10 sm:py-14 ${narrow ? "max-w-xl" : "max-w-5xl"}`}>{children}</div>;
+}
+
 export function PageHeader({
+  eyebrow,
   title,
   subtitle,
   action,
+  green,
 }: {
+  eyebrow?: string;
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
+  green?: boolean;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-navy">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div className="max-w-2xl">
+        {eyebrow && <p className={green ? "eyebrow-green" : "eyebrow"}>{eyebrow}</p>}
+        <h1 className="title mt-2">{title}</h1>
+        {subtitle && <p className="lede">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -85,8 +95,8 @@ export function PageHeader({
 export function Empty({ title, body, href, cta }: { title: string; body: string; href?: string; cta?: string }) {
   return (
     <div className="card py-10 text-center">
-      <p className="font-bold text-navy">{title}</p>
-      <p className="mx-auto mt-1 max-w-md text-sm text-muted">{body}</p>
+      <p className="text-lg font-extrabold text-navy">{title}</p>
+      <p className="mx-auto mt-1 max-w-md text-sm font-medium text-muted">{body}</p>
       {href && cta && (
         <Link href={href} className="btn btn-primary mt-4">
           {cta}

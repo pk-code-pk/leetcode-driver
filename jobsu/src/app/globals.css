@@ -1,15 +1,19 @@
 @import "tailwindcss";
 
+/* Colors, type and shapes follow jobsu.app. */
 @theme {
   --color-navy: #0b1b3a;
   --color-blue: #1f4b99;
   --color-blue-hover: #2d5fbf;
+  --color-sky: #93c5fd;
   --color-ice: #f5f8ff;
+  --color-field: #fafbff;
   --color-line: #e6ecff;
   --color-muted: #5b6b88;
   --color-green: #22c55e;
   --color-green-dark: #16a34a;
   --color-green-deep: #15803d;
+  --color-green-mid: #dcfce7;
   --color-green-bg: #f0fdf4;
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -20,15 +24,25 @@ body {
   font-family: var(--font-sans);
 }
 
+h1,
+h2 {
+  letter-spacing: -0.03em;
+}
+
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-5 py-2.5 text-sm font-bold transition-colors disabled:opacity-60;
   }
   .btn-primary {
     @apply bg-blue text-white hover:bg-blue-hover;
+    box-shadow: 0 4px 14px rgba(31, 75, 153, 0.25);
   }
   .btn-green {
     @apply bg-green-dark text-white hover:bg-green-deep;
+    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.25);
+  }
+  .btn-white {
+    @apply bg-white text-navy hover:bg-ice;
   }
   .btn-outline {
     @apply border border-line bg-white text-navy hover:border-blue;
@@ -37,18 +51,30 @@ body {
     @apply border border-red-200 bg-white text-red-700 hover:bg-red-50;
   }
   .card {
-    @apply rounded-2xl border border-line bg-white p-5;
+    @apply rounded-[20px] border border-line bg-white p-6;
   }
   .input {
-    @apply w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-navy outline-none focus:border-blue;
+    @apply w-full rounded-xl border border-line bg-field px-4 py-3 text-[15px] font-medium text-navy outline-none placeholder:font-normal placeholder:text-muted/70 focus:border-blue focus:bg-white;
   }
   .label {
-    @apply mb-1 block text-sm font-semibold text-navy;
+    @apply mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.08em] text-muted;
   }
   .hint {
-    @apply mt-1 text-xs text-muted;
+    @apply mt-1.5 text-xs leading-snug text-muted/80;
   }
   .badge {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold;
+  }
+  .eyebrow {
+    @apply text-xs font-extrabold uppercase tracking-[0.12em] text-blue;
+  }
+  .eyebrow-green {
+    @apply text-xs font-extrabold uppercase tracking-[0.12em] text-green-dark;
+  }
+  .title {
+    @apply text-3xl font-black text-navy sm:text-4xl;
+  }
+  .lede {
+    @apply mt-2 text-base font-medium leading-relaxed text-muted;
   }
 }

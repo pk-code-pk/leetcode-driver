@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
 import { resendCode, verifyEmail } from "@/app/actions/auth";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { Field } from "@/components/ui";
+import { Field, Page } from "@/components/ui";
 import { db } from "@/db";
 import { emails } from "@/db/schema";
 import { currentUser, homeFor } from "@/lib/auth";
@@ -21,9 +21,10 @@ export default async function Verify() {
   }
 
   return (
-    <div className="mx-auto max-w-sm">
-      <h1 className="text-2xl font-extrabold tracking-tight">Confirm your email</h1>
-      <p className="mt-1 text-sm text-muted">
+    <Page narrow>
+      <p className="eyebrow">One quick step</p>
+      <h1 className="title mt-2">Confirm your email</h1>
+      <p className="lede">
         We sent a 6-digit code to <span className="font-semibold text-navy">{user.email}</span>.
       </p>
       {devCode && (
@@ -40,6 +41,6 @@ export default async function Verify() {
       <ActionForm action={resendCode} className="mt-4">
         <SubmitButton className="text-sm font-semibold text-blue underline">Send a new code</SubmitButton>
       </ActionForm>
-    </div>
+    </Page>
   );
 }

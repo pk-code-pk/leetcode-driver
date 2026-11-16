@@ -73,11 +73,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="min-h-screen antialiased">
         <header className="border-b border-line bg-white">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3">
-            <Link href={ready ? homeFor(user.role) : "/"} className="text-xl font-black tracking-tight text-navy">
-              Jobs<span className="text-blue">U</span>
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 py-2.5">
+            <Link href={ready ? homeFor(user.role) : "/"} aria-label="JobsU home">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/JobsU-logo-nobackground.png" alt="JobsU" className="h-11 w-auto" />
             </Link>
-            <nav className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm font-semibold text-muted">
+            <nav className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm font-bold text-muted">
               {ready ? (
                 <>
                   {NAV[user.role].map(([href, label]) => (
@@ -103,16 +104,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <Link href="/log-in" className="hover:text-blue">
                     Log in
                   </Link>
-                  <Link href="/sign-up" className="btn btn-primary">
-                    Get started
+                  <Link href="/sign-up/student" className="hover:text-blue">
+                    I&apos;m a student
+                  </Link>
+                  <Link href="/sign-up/resident" className="btn btn-primary">
+                    Request a Job
                   </Link>
                 </>
               )}
             </nav>
           </div>
         </header>
-        <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
-        <footer className="mx-auto max-w-5xl px-4 pb-10 pt-6 text-xs text-muted">
+        <main>{children}</main>
+        <footer className="mx-auto max-w-6xl px-5 pb-10 pt-6 text-xs font-medium text-muted">
           <p className="font-semibold text-navy">Flexible work for students. Trusted help for residents.</p>
           <p className="mt-1">
             © {new Date().getFullYear()} JobsU, Inc. ·{" "}

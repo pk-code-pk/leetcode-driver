@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { signUpResident } from "@/app/actions/auth";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { AccountFields, Confirmations } from "@/components/SignUpFields";
-import { Field } from "@/components/ui";
+import { Field, Page, PageHeader } from "@/components/ui";
 import { currentUser, homeFor } from "@/lib/auth";
 import { TOWNS } from "@/lib/config";
 
@@ -10,12 +10,13 @@ export default async function ResidentSignUp() {
   const user = await currentUser();
   if (user) redirect(homeFor(user.role));
   return (
-    <div className="mx-auto max-w-lg">
-      <h1 className="text-2xl font-extrabold tracking-tight">Sign up as a resident</h1>
-      <p className="mt-1 text-sm text-muted">
-        Get help from .edu-confirmed Boston College students down the road. Requesting a job is free.
-      </p>
-      <ActionForm action={signUpResident} className="card mt-6 space-y-4">
+    <Page narrow>
+      <PageHeader
+        eyebrow="For residents"
+        title="Let's get your job done."
+        subtitle="Create your account, then post what you need. .edu-confirmed Boston College students nearby will apply. Requesting a job is free."
+      />
+      <ActionForm action={signUpResident} className="card space-y-5">
         <AccountFields />
         <Field label="Town">
           <select name="town" className="input" required defaultValue="">
@@ -40,6 +41,6 @@ export default async function ResidentSignUp() {
         <Confirmations />
         <SubmitButton>Create account</SubmitButton>
       </ActionForm>
-    </div>
+    </Page>
   );
 }
