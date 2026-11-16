@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev -p ${PORT:-3100}",
     "build": "next build",
+    "vercel-build": "drizzle-kit push --force && tsx scripts/seed.ts && next build",
     "start": "next start -p ${PORT:-3100}",
     "db:push": "drizzle-kit push --force",
     "db:studio": "drizzle-kit studio",
