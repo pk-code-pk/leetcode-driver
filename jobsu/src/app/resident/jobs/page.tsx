@@ -67,9 +67,9 @@ export default async function ResidentJobs() {
           <div className="rows">
             {rows.map(({ job, applicants }) => (
               <Link key={job.id} href={`/resident/jobs/${job.id}`} className="row group">
-                <JobTile type={job.type} size={48} />
+                <span className="hidden sm:block"><JobTile type={job.type} size={48} /></span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[20px] tracking-tight">{job.title}</p>
+                  <p className="line-clamp-2 text-[19px] leading-snug tracking-tight sm:line-clamp-none sm:truncate sm:text-[20px]">{job.title}</p>
                   <p className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-[14px] text-muted">
                     <Meta icon={CalendarDays}>{formatDate(job.startDate)}</Meta>
                     <Meta icon={Clock}>{formatHours(job.estMinutes)}</Meta>
