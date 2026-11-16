@@ -14,7 +14,9 @@ export default async function ResidentJobs() {
   const rows = await db
     .select({
       job: jobs,
-      applicants: sql<number>`(select count(*)::int from ${applications} a where a.job_id = ${jobs.id} and a.status = 'applied')`,
+      // Written out by hand: inside a single-table select, a column placeholder loses its table name.
+      applicants: sql<number>`(select count(*)::int from applications a where a.job_id = "jobs"."id" and a.status = 'applied')`,
+      awaitingConfirm: sql<boolean>`exists (select 1 from bookings b where b.job_id = "jobs"."id" and b.status = 'completed_pending')`,
     })
     .from(jobs)
     .where(and(eq(jobs.residentId, user.id)))
@@ -25,6 +27,15 @@ export default async function ResidentJobs() {
     .where(and(eq(bookings.residentId, user.id), eq(bookings.status, "completed")));
 
   const count = (s: string) => rows.filter((r) => r.job.status === s).length;
+  // What needs the resident first, then what's in motion, then history.
+  const needsYou = rows.filter((r) => r.awaitingConfirm || (r.job.status === "open" && r.applicants > 0));
+  const active = rows.filter((r) => !needsYou.includes(r) && ["open", "booked", "pending_review"].includes(r.job.status));
+  const past = rows.filter((r) => ["completed", "cancelled"].includes(r.job.status));
+  const groups = [
+    ["Needs you", needsYou],
+    ["In progress", active],
+    ["Past jobs", past],
+  ] as const;
   const waiting = rows.reduce((n, r) => n + (r.job.status === "open" ? r.applicants : 0), 0);
 
   return (
@@ -64,9 +75,17 @@ export default async function ResidentJobs() {
             ))}
           </dl>
 
-          <div className="rows">
-            {rows.map(({ job, applicants }) => (
-              <Link key={job.id} href={`/resident/jobs/${job.id}`} className="row group">
+          {groups.map(
+            ([label, list]) =>
+              list.length > 0 && (
+                <section key={label} className="mb-10">
+                  <h2 className="caption mb-3 flex items-center gap-2 text-muted">
+                    {label}
+                    <span className="num text-faint">{String(list.length).padStart(2, "0")}</span>
+                  </h2>
+                  <div className="rows">
+                    {list.map(({ job, applicants, awaitingConfirm }) => (
+                      <Link key={job.id} href={`/resident/jobs/${job.id}`} className="row group">
                 <span className="hidden sm:block"><JobTile type={job.type} size={48} /></span>
                 <div className="min-w-0 flex-1">
                   <p className="line-clamp-2 text-[19px] leading-snug tracking-tight sm:line-clamp-none sm:truncate sm:text-[20px]">{job.title}</p>
@@ -81,7 +100,7 @@ export default async function ResidentJobs() {
                       {applicants} {applicants === 1 ? "applicant" : "applicants"}
                     </Badge>
                   )}
-                  <JobStatusBadge status={job.status} />
+                  {awaitingConfirm ? <Badge tone="amber">Confirm it&apos;s done</Badge> : <JobStatusBadge status={job.status} />}
                 </div>
                 <div className="hidden w-28 text-right sm:block">
                   <Rate cents={job.rateCents} />
@@ -92,8 +111,11 @@ export default async function ResidentJobs() {
                   className="shrink-0 text-faint transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-ink"
                 />
               </Link>
-            ))}
-          </div>
+                    ))}
+                  </div>
+                </section>
+              ),
+          )}
         </>
       )}
     </Page>

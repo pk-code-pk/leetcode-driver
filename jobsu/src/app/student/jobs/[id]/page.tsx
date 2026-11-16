@@ -59,10 +59,12 @@ export default async function StudentJob({ params }: Props) {
   return (
     <Page>
       <Back href="/student/jobs">All jobs</Back>
-      <div className="mt-8 flex flex-wrap items-center gap-3">
+      <div className="mt-6 grid items-start gap-10 lg:grid-cols-[1fr_23rem] lg:gap-14">
+        <div className="min-w-0">
+      <div className="flex flex-wrap items-center gap-3">
         {mine ? <BookingStatusBadge status={mine.status} /> : app?.status === "applied" ? <Badge tone="green">Applied</Badge> : <Badge tone="blue">Open</Badge>}
       </div>
-      <h1 className="title mt-4 max-w-[20ch]">{job.title}</h1>
+      <h1 className="title mt-4 max-w-[24ch]">{job.title}</h1>
       <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-muted">
         Posted by {resident.firstName} in {job.town}
         <Stars rating={residentRating.average} count={residentRating.count} />
@@ -73,10 +75,10 @@ export default async function StudentJob({ params }: Props) {
         </div>
       )}
 
-      <div className="mt-12 grid items-start gap-12 lg:grid-cols-[1fr_23rem]">
-        <div className="space-y-16">
+        <div className="mt-10 space-y-12">
           {mine?.status === "completed" && <ReviewPanel booking={mine} viewerId={user.id} otherName={resident.firstName} />}
           <JobFacts job={job} showLandmark />
+        </div>
         </div>
 
         <aside className="space-y-6 lg:sticky lg:top-28">

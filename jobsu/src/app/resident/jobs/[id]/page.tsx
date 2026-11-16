@@ -62,11 +62,13 @@ export default async function ResidentJob({ params, searchParams }: Props) {
   return (
     <Page>
       <Back href="/resident/jobs">Your jobs</Back>
-      <div className="mt-8 flex flex-wrap items-center gap-3">
+      <div className="mt-6 grid items-start gap-10 lg:grid-cols-[1fr_23rem] lg:gap-14">
+        <div className="min-w-0">
+      <div className="flex flex-wrap items-center gap-3">
         <JobStatusBadge status={job.status} />
         {activeBooking && activeBooking.status !== "authorized" && <BookingStatusBadge status={activeBooking.status} />}
       </div>
-      <h1 className="title mt-4 max-w-[20ch]">{job.title}</h1>
+      <h1 className="title mt-4 max-w-[24ch]">{job.title}</h1>
       <div className="mt-8">
         <Progress job={job.status} booking={activeBooking?.status} />
       </div>
@@ -91,8 +93,7 @@ export default async function ResidentJob({ params, searchParams }: Props) {
         {job.status === "cancelled" && job.adminNote && <Notice tone="red">{job.adminNote}</Notice>}
       </div>
 
-      <div className="mt-12 grid items-start gap-12 lg:grid-cols-[1fr_23rem]">
-        <div className="space-y-16">
+        <div className="mt-10 space-y-12">
           {job.status === "open" && (
             <section>
               <SectionTitle count={open.length}>Applicants</SectionTitle>
@@ -172,6 +173,7 @@ export default async function ResidentJob({ params, searchParams }: Props) {
           )}
 
           <JobFacts job={job} showLandmark />
+        </div>
         </div>
 
         <aside className="space-y-6 lg:sticky lg:top-28">

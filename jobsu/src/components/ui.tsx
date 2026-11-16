@@ -127,7 +127,7 @@ export function EduBadge() {
 
 /** Standard page container. `narrow` suits forms. */
 export function Page({ children, narrow }: { children: React.ReactNode; narrow?: boolean }) {
-  return <div className={`rise mx-auto px-5 pb-16 pt-12 sm:pt-16 ${narrow ? "max-w-[42rem]" : "max-w-[1320px] sm:px-10"}`}>{children}</div>;
+  return <div className={`rise mx-auto px-5 pb-16 pt-8 sm:pt-11 ${narrow ? "max-w-[42rem]" : "max-w-[1320px] sm:px-10"}`}>{children}</div>;
 }
 
 export function PageHeader({
@@ -144,10 +144,10 @@ export function PageHeader({
   green?: boolean;
 }) {
   return (
-    <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-6">
       <div className="max-w-2xl">
         {eyebrow && <p className={green ? "eyebrow-green" : "eyebrow"}>{eyebrow}</p>}
-        <h1 className="title mt-4">{title}</h1>
+        <h1 className="title mt-3">{title}</h1>
         {subtitle && <p className="lede">{subtitle}</p>}
       </div>
       {action}

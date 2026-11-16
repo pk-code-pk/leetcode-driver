@@ -10,6 +10,7 @@ export function formatRate(cents: number | null): string {
 }
 
 export function formatHours(minutes: number): string {
+  if (minutes < 60) return `${minutes} minutes`;
   const h = minutes / 60;
   const s = Number.isInteger(h) ? String(h) : String(Math.round(h * 100) / 100);
   return `${s} ${h === 1 ? "hour" : "hours"}`;

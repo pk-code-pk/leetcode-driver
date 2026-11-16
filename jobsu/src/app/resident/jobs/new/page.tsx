@@ -13,7 +13,7 @@ export default async function NewJob() {
   const user = await requireUser("resident");
   const [profile] = await db.select().from(residentProfiles).where(eq(residentProfiles.userId, user.id)).limit(1);
   return (
-    <Page narrow>
+    <Page>
       <PageHeader
         eyebrow="For residents"
         title="Post a job"

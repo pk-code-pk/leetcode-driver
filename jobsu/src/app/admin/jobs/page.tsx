@@ -16,7 +16,7 @@ export default async function AdminJobs() {
     .select({
       job: jobs,
       resident: { firstName: users.firstName, lastName: users.lastName, email: users.email },
-      applicants: sql<number>`(select count(*)::int from ${applications} a where a.job_id = ${jobs.id})`,
+      applicants: sql<number>`(select count(*)::int from applications a where a.job_id = "jobs"."id")`,
     })
     .from(jobs)
     .innerJoin(users, eq(users.id, jobs.residentId))

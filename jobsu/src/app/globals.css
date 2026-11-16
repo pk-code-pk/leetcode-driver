@@ -264,15 +264,15 @@ h3 {
     color: var(--color-green-deep);
   }
   .title {
-    @apply text-[2.4rem] leading-[1.04] text-ink sm:text-[3.25rem];
-    letter-spacing: -0.03em;
+    @apply text-[2rem] leading-[1.08] text-ink sm:text-[2.5rem];
+    letter-spacing: -0.028em;
   }
   .display {
     @apply text-[2.6rem] leading-[1.02] sm:text-[3.75rem];
     letter-spacing: -0.035em;
   }
   .lede {
-    @apply mt-4 text-[18px] leading-normal text-muted;
+    @apply mt-3 text-[17px] leading-normal text-muted;
   }
   .num {
     font-variant-numeric: tabular-nums;

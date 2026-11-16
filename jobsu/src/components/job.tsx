@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { and, eq } from "drizzle-orm";
-import { Check, Star } from "lucide-react";
+import { Banknote, CalendarDays, Check, Clock, MapPin, Star } from "lucide-react";
 import { submitReview } from "@/app/actions/social";
 import { ActionForm, SubmitButton } from "./forms";
 import { Field, JobIcon } from "./ui";
@@ -11,38 +11,55 @@ import { jobType, timingLabel } from "@/lib/jobTypes";
 import { formatCents, formatHours, formatRate, jobTotalCents } from "@/lib/money";
 import { reviewVisible } from "@/lib/reviews";
 
-/** The description and facts of a job, laid out as ruled rows rather than a box. */
+/** A job at a glance: the four things everyone asks first, then the description and any extra answers. */
 export function JobFacts({ job, showLandmark }: { job: Job; showLandmark?: boolean }) {
   const type = jobType(job.type);
-  const facts: [string, string][] = [
-    ["When", `${formatDate(job.startDate)}${job.startTime ? ` at ${job.startTime}` : ""}`],
-    ["Time needed", formatHours(job.estMinutes)],
-    ["How often", timingLabel(job.timing)],
-    ["Where", showLandmark && job.landmark ? `${job.town} · ${job.landmark}` : job.town],
-    [
-      "Pay",
-      job.rateCents != null
-        ? `${formatRate(job.rateCents)} · about ${formatCents(jobTotalCents(job.rateCents, job.estMinutes))} total`
-        : "Rate to be suggested",
-    ],
-    ...type.questions.filter((q) => job.answers[q.key]).map((q): [string, string] => [q.label, job.answers[q.key]]),
+  const top: { icon: typeof CalendarDays; label: string; value: string; sub?: string }[] = [
+    { icon: CalendarDays, label: "When", value: formatDate(job.startDate), sub: job.startTime ? `at ${job.startTime}` : timingLabel(job.timing) },
+    { icon: Clock, label: "Time needed", value: formatHours(job.estMinutes), sub: timingLabel(job.timing) },
+    { icon: MapPin, label: "Where", value: job.town, sub: showLandmark && job.landmark ? job.landmark : "Exact address after booking" },
+    {
+      icon: Banknote,
+      label: "Pay",
+      value: job.rateCents != null ? formatRate(job.rateCents) : "Rate to be suggested",
+      sub: job.rateCents != null ? `about ${formatCents(jobTotalCents(job.rateCents, job.estMinutes))} total` : undefined,
+    },
   ];
+  const extra = type.questions.filter((q) => job.answers[q.key]);
 
   return (
     <section>
-      <p className="flex items-center gap-2 text-[14px] text-muted">
-        <JobIcon type={job.type} size={16} />
-        {type.label}
-      </p>
-      <p className="mt-4 max-w-[60ch] whitespace-pre-wrap text-[20px] leading-[1.45] text-ink">{job.description}</p>
-      <dl className="mt-8 border-b border-line">
-        {facts.map(([label, value]) => (
-          <div key={label} className="rule grid gap-1 py-4 sm:grid-cols-[15rem_1fr] sm:gap-6">
-            <dt className="text-muted">{label}</dt>
-            <dd className="text-ink">{value}</dd>
+      <dl className="grid grid-cols-2 overflow-hidden rounded-xl border border-line lg:grid-cols-4">
+        {top.map(({ icon: Icon, label, value, sub }, i) => (
+          <div key={label} className={`p-5 ${i % 2 ? "border-l border-line" : ""} ${i >= 2 ? "border-t border-line lg:border-t-0" : ""} ${i === 2 ? "lg:border-l" : ""}`}>
+            <dt className="flex items-center gap-2 text-[13px] text-muted">
+              <Icon size={15} strokeWidth={1.5} />
+              {label}
+            </dt>
+            <dd className="mt-2 text-[19px] leading-tight tracking-tight text-ink">{value}</dd>
+            {sub && <dd className="mt-1 text-[13px] text-faint">{sub}</dd>}
           </div>
         ))}
       </dl>
+
+      <div className="mt-8">
+        <p className="flex items-center gap-2 text-[14px] text-muted">
+          <JobIcon type={job.type} size={16} />
+          {type.label}
+        </p>
+        <p className="mt-3 max-w-[62ch] whitespace-pre-wrap text-[18px] leading-[1.5] text-ink">{job.description}</p>
+      </div>
+
+      {extra.length > 0 && (
+        <dl className="mt-7 grid gap-x-10 border-t border-line sm:grid-cols-2">
+          {extra.map((q) => (
+            <div key={q.key} className="border-b border-line py-4">
+              <dt className="text-[14px] text-muted">{q.label}</dt>
+              <dd className="mt-1 text-ink">{job.answers[q.key]}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </section>
   );
 }
