@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Backdrop } from "@/components/motion";
 import { signUpResident } from "@/app/actions/auth";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { AccountFields, Confirmations } from "@/components/SignUpFields";
@@ -11,12 +12,13 @@ export default async function ResidentSignUp() {
   if (user) redirect(homeFor(user.role));
   return (
     <Page narrow>
+      <Backdrop />
       <PageHeader
         eyebrow="For residents"
         title="Let's get your job done."
         subtitle="Create your account, then post what you need. .edu-confirmed Boston College students nearby will apply. Requesting a job is free."
       />
-      <ActionForm action={signUpResident} className="card space-y-5">
+      <ActionForm action={signUpResident} className="space-y-6 rounded-xl border border-line bg-white p-7 sm:p-9">
         <AccountFields />
         <Field label="Town">
           <select name="town" className="input" required defaultValue="">
@@ -39,7 +41,7 @@ export default async function ResidentSignUp() {
           <input name="heardFrom" className="input" />
         </Field>
         <Confirmations />
-        <SubmitButton>Create account</SubmitButton>
+        <SubmitButton className="btn btn-primary btn-lg w-full">Create account</SubmitButton>
       </ActionForm>
     </Page>
   );

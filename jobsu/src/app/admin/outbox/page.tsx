@@ -1,5 +1,6 @@
 import { desc } from "drizzle-orm";
-import { Page, PageHeader } from "@/components/ui";
+import { Plus } from "lucide-react";
+import { Badge, Notice, Page, PageHeader } from "@/components/ui";
 import { db } from "@/db";
 import { emails } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
@@ -12,29 +13,31 @@ export default async function Outbox() {
 
   return (
     <Page>
-      <PageHeader
-        eyebrow="Staff"
-        title="Emails"
-        subtitle={
-          delivering
-            ? "Every email JobsU has sent, newest first."
-            : "Email delivery isn't connected yet, so these were recorded here but not sent."
-        }
-      />
-      <div className="space-y-3">
+      <PageHeader eyebrow="Staff" title="Emails" subtitle="Every email JobsU has sent, newest first." />
+      {!delivering && (
+        <div className="mb-8">
+          <Notice tone="amber">Email delivery isn&apos;t connected yet, so these were recorded here but not sent.</Notice>
+        </div>
+      )}
+      <div className="border-b border-line">
         {rows.map((m) => (
-          <details key={m.id} className="card" data-testid="email">
-            <summary className="cursor-pointer">
-              <span className="font-extrabold">{m.subject}</span>
-              <span className="block text-sm font-medium text-muted">
-                To {m.to} · {timeAgo(m.createdAt)}
-                {m.error && <span className="ml-2 font-bold text-red-700">Failed: {m.error}</span>}
+          <details key={m.id} className="group rule" data-testid="email">
+            <summary className="grid cursor-pointer items-center gap-x-6 gap-y-1 py-5 sm:grid-cols-[1fr_18rem_6rem_auto]">
+              <span className="text-[18px] tracking-tight">{m.subject}</span>
+              <span className="truncate text-[14px] text-muted">{m.to}</span>
+              <span className="text-[13px] text-faint">{timeAgo(m.createdAt)}</span>
+              <span className="flex items-center gap-3">
+                {m.error && <Badge tone="red">Failed</Badge>}
+                <span className="flex h-7 w-7 items-center justify-center rounded-md border border-line transition-transform duration-500 group-open:rotate-45">
+                  <Plus size={15} strokeWidth={1.5} />
+                </span>
               </span>
             </summary>
-            <pre className="mt-3 whitespace-pre-wrap rounded-xl bg-ice px-4 py-3 font-sans text-sm font-medium">{m.body}</pre>
+            <pre className="inset mb-6 max-w-[70ch] whitespace-pre-wrap font-sans text-[15px]">{m.body}</pre>
+            {m.error && <p className="mb-6 text-[14px] text-red-700">{m.error}</p>}
           </details>
         ))}
-        {rows.length === 0 && <p className="text-sm font-medium text-muted">No emails yet.</p>}
+        {rows.length === 0 && <p className="rule py-8 text-muted">No emails yet.</p>}
       </div>
     </Page>
   );

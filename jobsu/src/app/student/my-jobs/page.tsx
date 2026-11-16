@@ -1,17 +1,18 @@
 import Link from "next/link";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { BookingStatusBadge, Empty, Page, PageHeader } from "@/components/ui";
+import { ArrowUpRight, Briefcase, CalendarDays, MapPin } from "lucide-react";
+import { CountUp } from "@/components/motion";
+import { Badge, BookingStatusBadge, Empty, JobTile, Meta, Page, PageHeader, Rate, SectionTitle, type Tone } from "@/components/ui";
 import { db } from "@/db";
 import { applications, bookings, jobs } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { formatDate } from "@/lib/dates";
-import { jobType } from "@/lib/jobTypes";
-import { formatCents, formatRate } from "@/lib/money";
+import { ratingsFor } from "@/lib/queries";
 
-const APP_LABEL: Record<string, string> = {
-  applied: "Applied",
-  declined: "Not selected",
-  withdrawn: "Withdrawn",
+const APP_LABEL: Record<string, [string, Tone]> = {
+  applied: ["Applied", "green"],
+  declined: ["Not selected", "slate"],
+  withdrawn: ["Withdrawn", "slate"],
 };
 
 export default async function MyJobs() {
@@ -30,41 +31,70 @@ export default async function MyJobs() {
     .orderBy(desc(applications.createdAt));
 
   const earned = booked.reduce((sum, b) => sum + (b.booking.status === "completed" ? b.booking.payoutCents ?? 0 : 0), 0);
+  const completed = booked.filter((b) => b.booking.status === "completed").length;
+  const upcoming = booked.filter((b) => b.booking.status === "authorized").length;
+  const rating = (await ratingsFor([user.id])).get(user.id)!;
+
+  const arrow = (
+    <ArrowUpRight
+      size={20}
+      strokeWidth={1.5}
+      className="shrink-0 text-faint transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-ink"
+    />
+  );
 
   return (
     <Page>
-      <PageHeader
-        green
-        eyebrow="For students"
-        title="My jobs"
-        action={
-          <div className="card px-5 py-3 text-right">
-            <p className="label mb-0">Earned on JobsU</p>
-            <p className="text-2xl font-black text-green-deep" data-testid="earned">
-              {formatCents(earned)}
-            </p>
-          </div>
-        }
-      />
+      <PageHeader eyebrow="For students" title="My jobs" />
+
+      <dl className="mb-12 grid grid-cols-2 border-y border-line sm:grid-cols-4">
+        <div className="py-6">
+          <dt className="caption">Earned on JobsU</dt>
+          <dd className="mt-2 text-[40px] leading-none tracking-tight" data-testid="earned">
+            <CountUp value={earned / 100} prefix="$" decimals={earned % 100 ? 2 : 0} />
+          </dd>
+        </div>
+        <div className="border-l border-line py-6 pl-6">
+          <dt className="caption">Jobs completed</dt>
+          <dd className="mt-2 text-[40px] leading-none tracking-tight">
+            <CountUp value={completed} />
+          </dd>
+        </div>
+        <div className="border-t border-line py-6 sm:border-l sm:border-t-0 sm:pl-6">
+          <dt className="caption">Coming up</dt>
+          <dd className="mt-2 text-[40px] leading-none tracking-tight">
+            <CountUp value={upcoming} />
+          </dd>
+        </div>
+        <div className="border-l border-t border-line py-6 pl-6 sm:border-t-0">
+          <dt className="caption">Your rating</dt>
+          <dd className="mt-2 text-[40px] leading-none tracking-tight">{rating.average != null ? rating.average.toFixed(1) : "—"}</dd>
+        </div>
+      </dl>
+
       {booked.length === 0 && apps.length === 0 ? (
-        <Empty title="Nothing here yet" body="Apply to a job and it will show up here." href="/student/jobs" cta="Find jobs" />
+        <Empty icon={Briefcase} title="Nothing here yet" body="Apply to a job and it will show up here." href="/student/jobs" cta="Find jobs" />
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-14">
           {booked.length > 0 && (
             <section>
-              <p className="eyebrow-green">Booked</p>
-              <div className="mt-3 space-y-3">
+              <SectionTitle count={booked.length}>Booked</SectionTitle>
+              <div className="rows mt-5">
                 {booked.map(({ booking, job }) => (
-                  <Link key={booking.id} href={`/student/jobs/${job.id}`} className="card flex flex-wrap items-center justify-between gap-3 hover:border-green-dark">
-                    <div>
-                      <p className="text-lg font-extrabold tracking-tight">
-                        {jobType(job.type).emoji} {job.title}
-                      </p>
-                      <p className="text-sm font-medium text-muted">
-                        {formatDate(job.startDate)} · {job.town} · {formatRate(booking.rateCents)}
+                  <Link key={booking.id} href={`/student/jobs/${job.id}`} className="row group">
+                    <JobTile type={job.type} size={48} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[20px] tracking-tight">{job.title}</p>
+                      <p className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-[14px] text-muted">
+                        <Meta icon={CalendarDays}>{formatDate(job.startDate)}</Meta>
+                        <Meta icon={MapPin}>{job.town}</Meta>
                       </p>
                     </div>
                     <BookingStatusBadge status={booking.status} />
+                    <div className="hidden w-28 text-right sm:block">
+                      <Rate cents={booking.rateCents} />
+                    </div>
+                    {arrow}
                   </Link>
                 ))}
               </div>
@@ -72,19 +102,23 @@ export default async function MyJobs() {
           )}
           {apps.length > 0 && (
             <section>
-              <p className="eyebrow-green">Applications</p>
-              <div className="mt-3 space-y-3">
+              <SectionTitle count={apps.length}>Applications</SectionTitle>
+              <div className="rows mt-5">
                 {apps.map(({ app, job }) => (
-                  <Link key={app.id} href={`/student/jobs/${job.id}`} className="card flex flex-wrap items-center justify-between gap-3 hover:border-green-dark">
-                    <div>
-                      <p className="text-lg font-extrabold tracking-tight">
-                        {jobType(job.type).emoji} {job.title}
-                      </p>
-                      <p className="text-sm font-medium text-muted">
-                        {formatDate(job.startDate)} · {job.town} · {formatRate(job.rateCents)}
+                  <Link key={app.id} href={`/student/jobs/${job.id}`} className="row group">
+                    <JobTile type={job.type} size={48} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[20px] tracking-tight">{job.title}</p>
+                      <p className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-[14px] text-muted">
+                        <Meta icon={CalendarDays}>{formatDate(job.startDate)}</Meta>
+                        <Meta icon={MapPin}>{job.town}</Meta>
                       </p>
                     </div>
-                    <span className="badge bg-slate-100 text-slate-700">{APP_LABEL[app.status]}</span>
+                    <Badge tone={APP_LABEL[app.status][1]}>{APP_LABEL[app.status][0]}</Badge>
+                    <div className="hidden w-28 text-right sm:block">
+                      <Rate cents={job.rateCents} />
+                    </div>
+                    {arrow}
                   </Link>
                 ))}
               </div>

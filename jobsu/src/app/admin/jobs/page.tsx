@@ -3,7 +3,7 @@ import { desc, eq, sql } from "drizzle-orm";
 import { reviewJob } from "@/app/actions/admin";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { JobFacts } from "@/components/job";
-import { Field, JobStatusBadge, Page, PageHeader } from "@/components/ui";
+import { Badge, Field, JobStatusBadge, Page, PageHeader, SectionTitle } from "@/components/ui";
 import { db } from "@/db";
 import { applications, jobs, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
@@ -29,80 +29,80 @@ export default async function AdminJobs() {
       <PageHeader eyebrow="Staff" title="Jobs" />
 
       <section>
-        <p className="eyebrow">Waiting for review ({pending.length})</p>
+        <SectionTitle count={pending.length}>Waiting for review</SectionTitle>
         {pending.length === 0 ? (
-          <p className="mt-3 text-sm font-medium text-muted">Nothing to review.</p>
+          <p className="rule mt-5 border-b border-line py-8 text-muted">Nothing to review.</p>
         ) : (
-          <div className="mt-3 space-y-6">
+          <div className="mt-5 space-y-6">
             {pending.map(({ job, resident }) => (
-              <div key={job.id} className="rounded-[24px] border border-amber-200 bg-amber-50/50 p-4" data-testid="pending-job">
-                <p className="px-2 text-xl font-extrabold tracking-tight">{job.title}</p>
-                <p className="px-2 text-sm font-medium text-muted">
-                  {resident.firstName} {resident.lastName} · {resident.email}
-                </p>
-                <p className="mt-2 flex flex-wrap gap-2 px-2">
-                  {job.reviewReasons.map((r) => (
-                    <span key={r} className="badge bg-amber-100 text-amber-800">
-                      {r}
-                    </span>
-                  ))}
-                </p>
-                <div className="mt-3">
-                  <JobFacts job={job} showLandmark />
-                </div>
-                <ActionForm action={reviewJob} className="card mt-3 space-y-4">
-                  <input type="hidden" name="jobId" value={job.id} />
-                  <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
-                    <Field label="Hourly rate" hint={job.rateCents == null ? "The resident asked for a suggestion." : "Leave as is, or adjust."}>
-                      <input name="rate" className="input" inputMode="decimal" defaultValue={job.rateCents != null ? job.rateCents / 100 : ""} placeholder="$30" />
-                    </Field>
-                    <Field label="Note to the resident (required when declining)">
-                      <input name="note" className="input" maxLength={500} />
-                    </Field>
+              <article key={job.id} className="grid gap-8 rounded-xl border border-line p-6 sm:p-8 lg:grid-cols-[1fr_22rem]" data-testid="pending-job">
+                <div>
+                  <p className="flex flex-wrap gap-2">
+                    {job.reviewReasons.map((r) => (
+                      <Badge key={r} tone="amber">
+                        {r}
+                      </Badge>
+                    ))}
+                  </p>
+                  <h3 className="mt-4 text-[32px] leading-tight tracking-tight">{job.title}</h3>
+                  <p className="mt-2 text-muted">
+                    {resident.firstName} {resident.lastName} · {resident.email}
+                  </p>
+                  <div className="mt-8">
+                    <JobFacts job={job} showLandmark />
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <SubmitButton className="btn btn-green" name="decision" value="approve">
+                </div>
+                <ActionForm action={reviewJob} className="tinted h-fit space-y-5 lg:sticky lg:top-28">
+                  <input type="hidden" name="jobId" value={job.id} />
+                  <Field label="Hourly rate" hint={job.rateCents == null ? "The resident asked for a suggestion." : "Leave as is, or adjust."}>
+                    <input name="rate" className="input" inputMode="decimal" defaultValue={job.rateCents != null ? job.rateCents / 100 : ""} placeholder="$30" />
+                  </Field>
+                  <Field label="Note to the resident" hint="Required when declining.">
+                    <textarea name="note" className="input min-h-20" maxLength={500} />
+                  </Field>
+                  <div className="grid gap-2">
+                    <SubmitButton className="btn btn-primary w-full" name="decision" value="approve">
                       Approve and post
                     </SubmitButton>
-                    <SubmitButton className="btn btn-danger" name="decision" value="reject">
+                    <SubmitButton className="btn btn-danger w-full" name="decision" value="reject">
                       Decline
                     </SubmitButton>
                   </div>
                 </ActionForm>
-              </div>
+              </article>
             ))}
           </div>
         )}
       </section>
 
-      <section className="mt-10">
-        <p className="eyebrow">All jobs</p>
-        <div className="card mt-3 overflow-x-auto p-0">
-          <table className="w-full text-left text-sm font-medium">
+      <section className="mt-16">
+        <SectionTitle count={rows.length}>All jobs</SectionTitle>
+        <div className="mt-5 overflow-x-auto rounded-xl border border-line">
+          <table className="w-full text-left">
             <thead>
-              <tr className="border-b border-line">
+              <tr className="border-b border-line bg-ice">
                 {["Job", "Resident", "Date", "Rate", "Applicants", "Status"].map((h) => (
-                  <th key={h} className="label px-5 py-3">
+                  <th key={h} className="caption px-5 py-3 font-normal">
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="num">
               {rows.map(({ job, resident, applicants }) => (
-                <tr key={job.id} className="border-b border-line last:border-0">
-                  <td className="px-5 py-3">
-                    <Link href={`/admin/jobs/${job.id}`} className="font-bold text-blue underline">
+                <tr key={job.id} className="border-b border-line transition-colors last:border-0 hover:bg-ice">
+                  <td className="px-5 py-4">
+                    <Link href={`/admin/jobs/${job.id}`} className="link">
                       {job.title}
                     </Link>
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-5 py-4 text-muted">
                     {resident.firstName} {resident.lastName}
                   </td>
-                  <td className="px-5 py-3">{formatDate(job.startDate)}</td>
-                  <td className="px-5 py-3">{formatRate(job.rateCents)}</td>
-                  <td className="px-5 py-3">{applicants}</td>
-                  <td className="px-5 py-3">
+                  <td className="px-5 py-4 text-muted">{formatDate(job.startDate)}</td>
+                  <td className="px-5 py-4">{formatRate(job.rateCents)}</td>
+                  <td className="px-5 py-4">{applicants}</td>
+                  <td className="px-5 py-4">
                     <JobStatusBadge status={job.status} />
                   </td>
                 </tr>

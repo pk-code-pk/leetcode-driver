@@ -6,9 +6,9 @@ export default async function ReportSent() {
   const user = await requireUser();
   return (
     <Page narrow>
-      <div className="card">
+      <div>
         <p className="eyebrow">Thank you</p>
-        <h1 className="title mt-2">We&apos;ve got your report.</h1>
+        <h1 className="title mt-4">We&apos;ve got your report.</h1>
         <p className="lede">
           We&apos;ll look into it and email you. There&apos;s no block button yet, but once we know, we make sure you
           aren&apos;t matched with this person again.

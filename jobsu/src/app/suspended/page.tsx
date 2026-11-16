@@ -9,11 +9,11 @@ export default async function Suspended() {
   return (
     <Page narrow>
     <div className="card">
-      <h1 className="text-xl font-extrabold">Your account is paused</h1>
-      <p className="mt-2 text-sm text-muted">
+      <h1 className="text-[32px] leading-tight tracking-tight">Your account is paused</h1>
+      <p className="mt-3 text-[15px] leading-relaxed text-muted">
         {user.suspendedReason || "We've paused this account while we look into something."} If you think this is a
         mistake, email{" "}
-        <a className="font-semibold text-blue underline" href="mailto:support@jobsu.app">
+        <a className="link" href="mailto:support@jobsu.app">
           support@jobsu.app
         </a>
         .

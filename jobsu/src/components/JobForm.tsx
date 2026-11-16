@@ -25,7 +25,7 @@ export function JobForm({
   const questions = type ? jobType(type).questions : [];
 
   return (
-    <ActionForm action={action} className="card space-y-5">
+    <ActionForm action={action} className="space-y-6 rounded-xl border border-line bg-white p-7 sm:p-9">
       <Field label="What do you need?">
         <select name="type" className="input" required value={type} onChange={(e) => setType(e.target.value)}>
           <option value="" disabled>
@@ -101,7 +101,7 @@ export function JobForm({
             required={!notSure}
           />
         </Field>
-        <label className="mt-2 flex items-center gap-2 text-sm font-medium text-navy">
+        <label className="mt-3 flex items-center gap-3 text-[14px] text-ink">
           <input type="checkbox" name="rateNotSure" checked={notSure} onChange={(e) => setNotSure(e.target.checked)} />
           Not sure — suggest a rate for me
         </label>
@@ -120,7 +120,7 @@ export function JobForm({
         </Field>
       </div>
 
-      <SubmitButton>Post job</SubmitButton>
+      <SubmitButton className="btn btn-primary btn-lg w-full">Post job</SubmitButton>
     </ActionForm>
   );
 }

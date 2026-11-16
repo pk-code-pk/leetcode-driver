@@ -2,7 +2,8 @@ import Link from "next/link";
 import { desc, eq, sql } from "drizzle-orm";
 import { resolveDispute } from "@/app/actions/admin";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { Page, PageHeader } from "@/components/ui";
+import { CountUp } from "@/components/motion";
+import { Badge, Page, PageHeader, SectionTitle } from "@/components/ui";
 import { db } from "@/db";
 import { bookings, conversations, jobs, messages, reports, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
@@ -40,63 +41,67 @@ export default async function AdminHome() {
     .orderBy(desc(messages.createdAt))
     .limit(20);
 
-  const stats: [string, string | number, string?][] = [
-    ["Residents", counts.residents],
-    ["Students", counts.students],
-    ["Open jobs", counts.openJobs],
-    ["Jobs to review", counts.pendingJobs, "/admin/jobs"],
-    ["Open reports", counts.openReports, "/admin/reports"],
-    ["Jobs completed", counts.completed],
-    ["Paid through JobsU", formatCents(counts.volume)],
-    ["JobsU fees earned", formatCents(counts.fees)],
+  const money = (cents: number) => <CountUp value={cents / 100} prefix="$" decimals={cents % 100 ? 2 : 0} />;
+  const stats: [string, React.ReactNode, string?][] = [
+    ["Jobs to review", <CountUp key="p" value={counts.pendingJobs} />, "/admin/jobs"],
+    ["Open reports", <CountUp key="r" value={counts.openReports} />, "/admin/reports"],
+    ["Open jobs", <CountUp key="o" value={counts.openJobs} />, "/admin/jobs"],
+    ["Jobs completed", <CountUp key="c" value={counts.completed} />],
+    ["Residents", <CountUp key="re" value={counts.residents} />, "/admin/users"],
+    ["Students", <CountUp key="s" value={counts.students} />, "/admin/users"],
+    ["Paid through JobsU", money(counts.volume)],
+    ["JobsU fees earned", money(counts.fees)],
   ];
 
   return (
     <Page>
       <PageHeader eyebrow="Staff" title="Overview" />
-      <div className="grid gap-4 sm:grid-cols-4">
+
+      <dl className="grid grid-cols-2 overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-4" style={{ gap: 1 }}>
         {stats.map(([label, value, href]) => {
           const body = (
             <>
-              <p className="label">{label}</p>
-              <p className="text-3xl font-black">{value}</p>
+              <dt className="caption">{label}</dt>
+              <dd className="mt-3 text-[44px] leading-none tracking-tight">{value}</dd>
             </>
           );
           return href ? (
-            <Link key={label} href={href} className="card hover:border-blue">
+            <Link key={label} href={href} className="group bg-white p-6 transition-colors hover:bg-ice">
               {body}
             </Link>
           ) : (
-            <div key={label} className="card">
+            <div key={label} className="bg-white p-6">
               {body}
             </div>
           );
         })}
-      </div>
+      </dl>
 
-      <section className="mt-10">
-        <p className="eyebrow">Problems raised on bookings</p>
+      <section className="mt-16">
+        <SectionTitle count={disputes.length}>Problems raised on bookings</SectionTitle>
         {disputes.length === 0 ? (
-          <p className="mt-3 text-sm font-medium text-muted">None right now.</p>
+          <p className="rule mt-5 border-b border-line py-8 text-muted">None right now.</p>
         ) : (
-          <div className="mt-3 space-y-4">
+          <div className="mt-5 border-b border-line">
             {disputes.map(({ booking, jobTitle }) => (
-              <div key={booking.id} className="card">
-                <p className="text-lg font-extrabold">{jobTitle}</p>
-                <p className="mt-1 text-sm font-medium text-muted">
-                  Held: {formatCents(booking.authorizedCents)} · raised {booking.disputedAt ? timeAgo(booking.disputedAt) : ""}
-                </p>
-                <p className="mt-3 rounded-xl bg-ice px-4 py-3 text-sm font-medium">{booking.disputeReason}</p>
-                <div className="mt-4 flex flex-wrap gap-2">
+              <div key={booking.id} className="rule grid gap-5 py-7 lg:grid-cols-[1fr_auto]">
+                <div>
+                  <p className="text-[24px] tracking-tight">{jobTitle}</p>
+                  <p className="mt-1 text-[14px] text-muted">
+                    {formatCents(booking.authorizedCents)} held · raised {booking.disputedAt ? timeAgo(booking.disputedAt) : ""}
+                  </p>
+                  <p className="inset mt-4 max-w-[60ch]">{booking.disputeReason}</p>
+                </div>
+                <div className="flex flex-wrap items-start gap-2 lg:flex-col">
                   <ActionForm action={resolveDispute}>
                     <input type="hidden" name="bookingId" value={booking.id} />
-                    <SubmitButton className="btn btn-green" name="decision" value="release">
+                    <SubmitButton className="btn btn-primary btn-sm w-full" name="decision" value="release">
                       Pay the student
                     </SubmitButton>
                   </ActionForm>
                   <ActionForm action={resolveDispute}>
                     <input type="hidden" name="bookingId" value={booking.id} />
-                    <SubmitButton className="btn btn-danger" name="decision" value="refund">
+                    <SubmitButton className="btn btn-outline btn-sm w-full" name="decision" value="refund">
                       Don&apos;t charge the resident
                     </SubmitButton>
                   </ActionForm>
@@ -107,26 +112,29 @@ export default async function AdminHome() {
         )}
       </section>
 
-      <section className="mt-10">
-        <p className="eyebrow">Flagged messages</p>
-        <p className="hint">Messages that mention paying outside JobsU or share contact details before booking.</p>
+      <section className="mt-16">
+        <SectionTitle count={flagged.length}>Flagged messages</SectionTitle>
+        <p className="mt-2 text-muted">Messages that mention paying outside JobsU or share contact details before booking.</p>
         {flagged.length === 0 ? (
-          <p className="mt-3 text-sm font-medium text-muted">None yet.</p>
+          <p className="rule mt-5 border-b border-line py-8 text-muted">None yet.</p>
         ) : (
-          <div className="mt-3 space-y-3">
+          <div className="mt-5 border-b border-line">
             {flagged.map(({ message, sender }) => (
-              <div key={message.id} className="card">
-                <p className="text-sm font-bold">
-                  {sender} <span className="font-medium text-muted">· {timeAgo(message.createdAt)}</span>
-                </p>
-                <p className="mt-1 text-sm font-medium">{message.body}</p>
-                <p className="mt-2 flex flex-wrap gap-2">
-                  {message.flagReasons.map((r) => (
-                    <span key={r} className="badge bg-amber-100 text-amber-800">
-                      {r}
-                    </span>
-                  ))}
-                </p>
+              <div key={message.id} className="rule grid gap-3 py-5 sm:grid-cols-[16rem_1fr]">
+                <div>
+                  <p className="truncate">{sender}</p>
+                  <p className="text-[13px] text-faint">{timeAgo(message.createdAt)}</p>
+                </div>
+                <div>
+                  <p className="text-ink">{message.body}</p>
+                  <p className="mt-3 flex flex-wrap gap-2">
+                    {message.flagReasons.map((r) => (
+                      <Badge key={r} tone="amber">
+                        {r}
+                      </Badge>
+                    ))}
+                  </p>
+                </div>
               </div>
             ))}
           </div>

@@ -25,7 +25,7 @@ export default async function Report({ searchParams }: Props) {
         title="Report a problem"
         subtitle="A real person at JobsU reads every report. If someone is in danger, call 911 first."
       />
-      <ActionForm action={submitReport} className="card space-y-5">
+      <ActionForm action={submitReport} className="space-y-6 rounded-xl border border-line bg-white p-7 sm:p-9">
         <input type="hidden" name="conversationId" value={uuid(q.conversationId)} />
         <input type="hidden" name="jobId" value={uuid(q.jobId)} />
         <input type="hidden" name="subjectId" value={uuid(q.subjectId)} />

@@ -75,19 +75,19 @@ test("a job goes from posted to paid and rated", async ({ browser }) => {
   await expect(student.locator("[data-testid=earned]")).toHaveText("$67.50");
 
   // Ratings are hidden from the other side until both are in.
-  await resident.click('label:has-text("5★")');
+  await resident.click('label[data-star="5"]');
   await resident.fill("[name=comment]", "On time and thorough.");
   await resident.click('button:has-text("Submit rating")');
-  await expect(resident.getByText("You rated Jake 5★")).toBeVisible();
+  await expect(resident.getByText("You rated Jake")).toBeVisible();
 
   await student.goto(`/student/jobs/${jobId}`);
   await expect(student.getByText("Sarah has rated you. You'll see it once you submit yours.")).toBeVisible();
   await expect(student.getByText("On time and thorough.")).toHaveCount(0);
-  await student.click('label:has-text("4★")');
+  await student.click('label[data-star="4"]');
   await student.click('button:has-text("Submit rating")');
-  await expect(student.getByText("You rated Sarah 4★")).toBeVisible();
+  await expect(student.getByText("You rated Sarah")).toBeVisible();
   await student.reload();
-  await expect(student.getByText("Sarah rated you 5★")).toBeVisible();
+  await expect(student.getByText("Sarah rated you")).toBeVisible();
 
   // A second rating is refused, and the job is closed to new applicants.
   const other = await newPage(browser);
@@ -315,7 +315,7 @@ test("payment releases automatically 7 days after the job date", async ({ browse
 test("reports reach staff, and a paused account is locked out", async ({ browser }) => {
   const { resident, student, jobId, studentEmail } = await bookedJob(browser, `Report ${uniq()}`);
   await resident.goto("/messages");
-  await resident.locator("a.card").first().click();
+  await resident.locator("[data-testid=conversation]").first().click();
   await resident.getByRole("link", { name: "Report", exact: true }).click();
   await resident.selectOption("[name=reason]", "Didn't show up");
   await resident.fill("[name=details]", "Waited an hour and nobody came to the house.");

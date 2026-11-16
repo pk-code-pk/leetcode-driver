@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, eq, inArray } from "drizzle-orm";
-import { Avatar, EduBadge, Page, Stars } from "@/components/ui";
+import { Avatar, EduBadge, JobIcon, Page, SectionTitle, Stars } from "@/components/ui";
 import { db } from "@/db";
 import { applications, bookings, jobs, studentProfiles, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
@@ -52,92 +52,99 @@ export default async function StudentPublicProfile({ params }: Props) {
   const reviews = await visibleReviewsFor([id]);
   const name = hasBooked ? fullName(user) : publicName(user);
 
-  return (
-    <Page narrow>
-      <div className="card">
-        <div className="flex flex-wrap items-center gap-4">
-          <Avatar name={name} size={64} />
-          <div>
-            <h1 className="text-3xl font-black">{name}</h1>
-            <p className="text-sm font-semibold text-muted">
-              {profile.school}
-              {profile.gradYear ? ` · Class of ${profile.gradYear}` : ""}
-              {profile.major ? ` · ${profile.major}` : ""}
-            </p>
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center gap-4 text-sm font-semibold text-muted">
-          <EduBadge />
-          <Stars rating={rating.average} count={rating.count} />
-          <span>{completed} jobs completed</span>
-          {profile.hasCar && <span>🚗 Has a car</span>}
-        </div>
-        {profile.bio && <p className="mt-5 whitespace-pre-wrap font-medium leading-relaxed">{profile.bio}</p>}
-        <dl className="mt-5 grid gap-4 border-t border-line pt-5 sm:grid-cols-2">
-          {profile.jobTypes.length > 0 && (
-            <div className="sm:col-span-2">
-              <dt className="label">Jobs they do</dt>
-              <dd className="flex flex-wrap gap-2">
-                {profile.jobTypes.map((t) => (
-                  <span key={t} className="rounded-full bg-ice px-3 py-1 text-sm font-bold">
-                    {jobType(t).emoji} {jobType(t).label}
-                  </span>
-                ))}
-              </dd>
-            </div>
-          )}
-          {profile.availability && (
-            <div>
-              <dt className="label">Usually free</dt>
-              <dd className="font-semibold">{profile.availability}</dd>
-            </div>
-          )}
-          {profile.certifications && (
-            <div>
-              <dt className="label">Certifications (self-reported)</dt>
-              <dd className="font-semibold">{profile.certifications}</dd>
-            </div>
-          )}
-          {hasBooked && user.phone && (
-            <div>
-              <dt className="label">Phone</dt>
-              <dd className="font-semibold">{user.phone}</dd>
-            </div>
-          )}
-          {viewer.role === "admin" && (
-            <div>
-              <dt className="label">Email · cancellations</dt>
-              <dd className="font-semibold">
-                {user.email} · {profile.strikes}
-              </dd>
-            </div>
-          )}
-        </dl>
-      </div>
+  const facts: [string, React.ReactNode][] = [];
+  if (profile.availability) facts.push(["Usually free", profile.availability]);
+  if (profile.certifications) facts.push(["Certifications (self-reported)", profile.certifications]);
+  if (profile.hasCar) facts.push(["Transport", "Has a car on campus"]);
+  if (hasBooked && user.phone) facts.push(["Phone", user.phone]);
+  if (viewer.role === "admin") {
+    facts.push(["Email", user.email]);
+    facts.push(["Cancelled bookings", String(profile.strikes)]);
+  }
 
-      <section className="mt-8">
-        <p className="eyebrow">Ratings from families</p>
-        {reviews.length === 0 ? (
-          <p className="mt-3 text-sm font-medium text-muted">No ratings yet. Every student starts somewhere.</p>
-        ) : (
-          <div className="mt-3 space-y-3">
-            {reviews.map((r) => (
-              <div key={r.id} className="card">
-                <p className="font-extrabold">
-                  {r.rating}★ <span className="font-semibold text-muted">from {r.authorFirstName}</span>
-                </p>
-                {r.comment && <p className="mt-1 text-sm font-medium">{r.comment}</p>}
-              </div>
-            ))}
+  return (
+    <Page>
+      <div className="grid items-start gap-12 lg:grid-cols-[1fr_23rem]">
+        <div>
+          <div className="flex flex-wrap items-center gap-6">
+            <Avatar name={name} size={96} verified />
+            <div>
+              <EduBadge />
+              <h1 className="title mt-3">{name}</h1>
+              <p className="mt-2 text-muted">
+                {profile.school}
+                {profile.gradYear ? ` · Class of ${profile.gradYear}` : ""}
+                {profile.major ? ` · ${profile.major}` : ""}
+              </p>
+            </div>
           </div>
-        )}
-      </section>
-      <p className="mt-8 text-sm font-medium text-muted">
-        Something not right?{" "}
-        <Link href={`/report?subjectId=${id}`} className="font-bold text-blue underline">
-          Report this profile
-        </Link>
-      </p>
+
+          {profile.bio && <p className="mt-10 max-w-[60ch] whitespace-pre-wrap text-[20px] leading-[1.45]">{profile.bio}</p>}
+
+          {profile.jobTypes.length > 0 && (
+            <div className="mt-8 flex flex-wrap gap-2">
+              {profile.jobTypes.map((t) => (
+                <span key={t} className="chip">
+                  <JobIcon type={t} size={16} /> {jobType(t).label}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {facts.length > 0 && (
+            <dl className="mt-10 border-b border-line">
+              {facts.map(([k, v]) => (
+                <div key={k} className="rule grid gap-1 py-4 sm:grid-cols-[15rem_1fr] sm:gap-6">
+                  <dt className="text-muted">{k}</dt>
+                  <dd>{v}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+
+          <section className="mt-16">
+            <SectionTitle count={reviews.length}>Ratings from families</SectionTitle>
+            {reviews.length === 0 ? (
+              <p className="rule mt-5 border-b border-line py-8 text-muted">No ratings yet. Every student starts somewhere.</p>
+            ) : (
+              <div className="mt-5 border-b border-line">
+                {reviews.map((r) => (
+                  <figure key={r.id} className="rule py-7">
+                    <Stars rating={r.rating} />
+                    {r.comment && <blockquote className="mt-3 max-w-[50ch] text-[22px] leading-snug tracking-tight">“{r.comment}”</blockquote>}
+                    <figcaption className="mt-3 text-[14px] text-muted">{r.authorFirstName}</figcaption>
+                  </figure>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+
+        <aside className="lg:sticky lg:top-28">
+          <dl className="glass grid grid-cols-2 rounded-xl">
+            <div className="p-6">
+              <dt className="caption">Rating</dt>
+              <dd className="mt-2 text-[40px] leading-none tracking-tight">{rating.average != null ? rating.average.toFixed(1) : "—"}</dd>
+              <dd className="mt-1 text-[13px] text-faint">
+                {rating.count} {rating.count === 1 ? "rating" : "ratings"}
+              </dd>
+            </div>
+            <div className="border-l border-ink/10 p-6">
+              <dt className="caption">Jobs completed</dt>
+              <dd className="mt-2 text-[40px] leading-none tracking-tight">{completed}</dd>
+              <dd className="mt-1 text-[13px] text-faint">on JobsU</dd>
+            </div>
+          </dl>
+          {viewer.role === "resident" && (
+            <p className="mt-5 px-1 text-[14px] text-faint">
+              Something not right?{" "}
+              <Link href={`/report?subjectId=${id}`} className="link">
+                Report this profile
+              </Link>
+            </p>
+          )}
+        </aside>
+      </div>
     </Page>
   );
 }

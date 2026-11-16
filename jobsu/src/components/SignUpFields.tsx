@@ -27,20 +27,20 @@ export function AccountFields({ emailHint, emailPlaceholder }: { emailHint?: str
 
 export function Confirmations() {
   return (
-    <div className="space-y-2 text-sm text-navy">
-      <label className="flex items-start gap-2">
-        <input type="checkbox" name="adult" className="mt-1" />
+    <div className="space-y-3 text-[14px] text-ink">
+      <label className="flex items-center gap-3">
+        <input type="checkbox" name="adult" />
         <span>I am 18 or older.</span>
       </label>
-      <label className="flex items-start gap-2">
-        <input type="checkbox" name="terms" className="mt-1" />
+      <label className="flex items-center gap-3">
+        <input type="checkbox" name="terms" />
         <span>
           I agree to the{" "}
-          <a href="https://jobsu.app/terms.html" target="_blank" className="font-semibold text-blue underline">
+          <a href="https://jobsu.app/terms.html" target="_blank" className="link">
             Terms of Service
           </a>{" "}
           and{" "}
-          <a href="https://jobsu.app/privacy.html" target="_blank" className="font-semibold text-blue underline">
+          <a href="https://jobsu.app/privacy.html" target="_blank" className="link">
             Privacy Policy
           </a>
           .
