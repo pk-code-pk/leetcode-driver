@@ -162,6 +162,13 @@ export default async function StudentProfile({ searchParams }: Props) {
             <span className="sq transition-transform duration-500 group-hover:rotate-45" />
           </Link>
 
+          <p className="px-1 text-[14px] text-faint">
+            Need to change your password?{" "}
+            <Link href="/account" className="link">
+              Account settings
+            </Link>
+          </p>
+
           {profile.strikes > 0 && (
             <Notice tone="amber">
               You&apos;ve cancelled {profile.strikes} booked {profile.strikes === 1 ? "job" : "jobs"}. Repeated cancellations can

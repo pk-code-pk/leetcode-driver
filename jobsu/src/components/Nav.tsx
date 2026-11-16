@@ -25,6 +25,7 @@ const ICONS: Record<string, LucideIcon> = {
   "/student/jobs": Search,
   "/student/my-jobs": Briefcase,
   "/student/profile": UserRound,
+  "/account": UserRound,
   "/admin": LayoutDashboard,
   "/admin/jobs": ClipboardList,
   "/admin/users": Users,

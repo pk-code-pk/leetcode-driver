@@ -42,6 +42,7 @@ const NAV: Record<string, [string, string][]> = {
     ["/resident/jobs", "My jobs"],
     ["/resident/jobs/new", "Post a job"],
     ["/messages", "Messages"],
+    ["/account", "Account"],
   ],
   student: [
     ["/student/jobs", "Find jobs"],

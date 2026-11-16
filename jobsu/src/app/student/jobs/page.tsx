@@ -50,7 +50,7 @@ export default async function StudentJobs({ searchParams }: Props) {
       )}
 
       {/* One joined filter bar that floats over the list while scrolling */}
-      <form method="get" className="glass z-30 mb-8 grid rounded-xl sm:sticky sm:top-[84px] sm:grid-cols-[1.2fr_1fr_1fr_1fr_auto]">
+      <form method="get" className="glass z-30 mb-8 grid grid-cols-2 rounded-xl sm:sticky sm:top-[84px] sm:grid-cols-[1.2fr_1fr_1fr_1fr_auto]">
         {(
           [
             ["Job type", <select key="t" name="type" className={`${field} appearance-none`} defaultValue={q.type ?? ""}><option value="">All types</option>{JOB_TYPES.map((t) => <option key={t.slug} value={t.slug}>{t.label}</option>)}</select>],
@@ -59,12 +59,15 @@ export default async function StudentJobs({ searchParams }: Props) {
             ["From date", <input key="f" name="from" type="date" className={field} defaultValue={q.from ?? ""} />],
           ] as const
         ).map(([label, control], i) => (
-          <label key={label} className={`relative block ${i ? "border-t border-ink/10 sm:border-l sm:border-t-0" : ""}`}>
+          <label
+            key={label}
+            className={`relative block min-w-0 border-ink/10 ${i % 2 ? "border-l" : ""} ${i >= 2 ? "border-t sm:border-t-0" : ""} ${i ? "sm:border-l" : ""}`}
+          >
             <span className="caption pointer-events-none absolute left-4 top-2.5">{label}</span>
             {control}
           </label>
         ))}
-        <div className="flex items-center gap-2 border-t border-ink/10 p-2 sm:border-l sm:border-t-0">
+        <div className="col-span-2 flex items-center gap-2 border-t border-ink/10 p-2 sm:col-span-1 sm:border-l sm:border-t-0">
           <button className="btn btn-primary btn-sm h-10 w-full">Search</button>
         </div>
       </form>

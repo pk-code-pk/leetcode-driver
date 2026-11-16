@@ -24,6 +24,7 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       DATABASE_URL,
+      NEXT_DIST_DIR: ".next-test",
       APP_URL: `http://localhost:${PORT}`,
       STUDENT_EMAIL_DOMAINS: "bc.edu",
       ADMIN_EMAILS: "admin@jobsu.test",

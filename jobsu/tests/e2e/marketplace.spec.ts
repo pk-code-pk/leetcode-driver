@@ -347,3 +347,52 @@ test("reports reach staff, and a paused account is locked out", async ({ browser
   await expect(student).toHaveURL(/\/suspended/);
   await expect(student.getByText("Missed a booked job without notice.")).toBeVisible();
 });
+
+test("a forgotten password can be reset with an emailed code, and account details can be changed", async ({ browser }) => {
+  const tag = uniq();
+  const email = `reset.${tag}@example.com`;
+  const page = await newPage(browser);
+  await signUpResident(page, "Rita", email);
+
+  // Change details and password from the account page.
+  await page.goto("/account");
+  await page.fill("[name=firstName]", "Margarita");
+  await page.selectOption("[name=town]", "Brookline");
+  await page.click('button:has-text("Save changes")');
+  await expect(page.getByText("Saved.")).toBeVisible();
+  await page.fill("[name=currentPassword]", "wrong-password");
+  await page.fill("[name=newPassword]", "another-pass-1");
+  await page.click('button:has-text("Change password")');
+  await expect(page.locator("p[role=alert]")).toContainText("current password isn't right");
+
+  // Forgot password: an unknown email gets the same screen and no code.
+  const anon = await newPage(browser);
+  await anon.goto("/forgot");
+  await anon.fill("[name=email]", `nobody.${tag}@example.com`);
+  await anon.click('button:has-text("Send code")');
+  await expect(anon).toHaveURL(/\/reset/);
+  await expect(anon.locator("[data-testid=dev-code]")).toHaveCount(0);
+
+  await anon.goto("/forgot");
+  await anon.fill("[name=email]", email);
+  await anon.click('button:has-text("Send code")');
+  await anon.fill("[name=code]", "000000");
+  await anon.fill("[name=password]", "brand-new-pass-9");
+  await anon.click('button:has-text("Save and log in")');
+  await expect(anon.locator("p[role=alert]")).toContainText("isn't right");
+
+  const code = await anon.textContent("[data-testid=dev-code]");
+  await anon.fill("[name=code]", code!);
+  await anon.fill("[name=password]", "brand-new-pass-9");
+  await anon.click('button:has-text("Save and log in")');
+  await expect(anon).toHaveURL(/\/resident\/jobs$/);
+  await expect(anon.getByText("Hi Margarita")).toBeVisible();
+
+  // The reset signed the old session out, and the old password no longer works.
+  await page.goto("/resident/jobs");
+  await expect(page).toHaveURL(/\/log-in/);
+  await page.fill("[name=email]", email);
+  await page.fill("[name=password]", "password123");
+  await page.click('button:has-text("Log in")');
+  await expect(page.locator("p[role=alert]")).toContainText("don't match");
+});

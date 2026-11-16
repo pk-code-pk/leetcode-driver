@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { residentProfiles, studentProfiles, users, waitlist } from "@/db/schema";
+import { residentProfiles, sessions, studentProfiles, users, waitlist } from "@/db/schema";
 import {
   checkVerificationCode,
   createSession,
@@ -160,4 +160,69 @@ export async function logIn(_: FormState, data: FormData): Promise<FormState> {
 export async function logOut(): Promise<void> {
   await destroySession();
   redirect("/");
+}
+
+export async function requestPasswordReset(_: FormState, data: FormData): Promise<FormState> {
+  const email = normalizeEmail(str(data, "email"));
+  if (!isValidEmail(email)) return { error: "Please enter a valid email address." };
+  const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  // The same response either way, so this form can't be used to check who has an account.
+  if (user) {
+    const code = await issueVerificationCode(user.id);
+    await sendEmail({
+      to: email,
+      subject: `${code} is your JobsU password reset code`,
+      body: `Hi ${user.firstName},\n\nUse ${code} to reset your JobsU password. It expires in 15 minutes. If you didn't ask for this, you can ignore this email.`,
+    });
+  }
+  redirect(`/reset?email=${encodeURIComponent(email)}`);
+}
+
+export async function resetPassword(_: FormState, data: FormData): Promise<FormState> {
+  const email = normalizeEmail(str(data, "email"));
+  const password = str(data, "password");
+  if (password.length < 8) return { error: "Your new password needs at least 8 characters." };
+  const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  const result = user ? await checkVerificationCode(user.id, str(data, "code")) : "wrong";
+  if (result === "expired") return { error: "That code has expired. Go back and request a new one." };
+  if (result === "too_many") return { error: "Too many tries. Go back and request a new code." };
+  if (result !== "ok" || !user) return { error: "That code isn't right. Check the email and try again." };
+
+  await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, user.id));
+  await db.delete(sessions).where(eq(sessions.userId, user.id)); // sign out everywhere
+  await createSession(user.id);
+  if (user.suspendedAt) redirect("/suspended");
+  redirect(homeFor(user.role));
+}
+
+export async function updateAccount(_: FormState, data: FormData): Promise<FormState> {
+  const user = await currentUser();
+  if (!user) redirect("/log-in");
+  const firstName = str(data, "firstName");
+  if (!firstName) return { error: "Please enter your first name." };
+  await db
+    .update(users)
+    .set({ firstName, lastName: str(data, "lastName"), phone: str(data, "phone") })
+    .where(eq(users.id, user.id));
+  if (user.role === "resident") {
+    const town = str(data, "town");
+    if (!TOWNS.includes(town as (typeof TOWNS)[number])) return { error: "Please choose your town." };
+    await db
+      .update(residentProfiles)
+      .set({ town, landmark: str(data, "landmark") })
+      .where(eq(residentProfiles.userId, user.id));
+  }
+  return { notice: "Saved." };
+}
+
+export async function changePassword(_: FormState, data: FormData): Promise<FormState> {
+  const user = await currentUser();
+  if (!user) redirect("/log-in");
+  const next = str(data, "newPassword");
+  if (!(await verifyPassword(str(data, "currentPassword"), user.passwordHash))) {
+    return { error: "Your current password isn't right." };
+  }
+  if (next.length < 8) return { error: "Your new password needs at least 8 characters." };
+  await db.update(users).set({ passwordHash: await hashPassword(next) }).where(eq(users.id, user.id));
+  return { notice: "Password changed." };
 }

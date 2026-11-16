@@ -20,13 +20,15 @@ export function ActionForm({
   return (
     <form action={formAction} className={className}>
       {state.error && (
-        <p role="alert" className="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-[14px] font-medium text-red-800 ring-1 ring-inset ring-red-600/15">
-          {state.error}
+        <p role="alert" className="mb-5 flex gap-3 rounded-lg bg-red-50 px-4 py-3.5 text-[15px] text-red-800">
+          <span className="sq mt-[7px]" />
+          <span>{state.error}</span>
         </p>
       )}
       {state.notice && (
-        <p role="status" className="mb-5 rounded-2xl bg-green-bg px-4 py-3 text-[14px] font-medium text-green-deep ring-1 ring-inset ring-green-600/15">
-          {state.notice}
+        <p role="status" className="mb-5 flex gap-3 rounded-lg bg-green-bg px-4 py-3.5 text-[15px] text-green-deep">
+          <span className="sq mt-[7px]" />
+          <span>{state.notice}</span>
         </p>
       )}
       {children}

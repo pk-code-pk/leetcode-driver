@@ -21,6 +21,11 @@ export default async function LogIn() {
           <input name="password" type="password" className="input" required autoComplete="current-password" />
         </Field>
         <SubmitButton className="btn btn-primary btn-lg w-full">Log in</SubmitButton>
+        <p className="text-center text-[15px]">
+          <Link href="/forgot" className="link">
+            Forgot your password?
+          </Link>
+        </p>
       </ActionForm>
       <p className="mt-6 text-muted">
         New here?{" "}
