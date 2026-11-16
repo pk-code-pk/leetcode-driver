@@ -1,24 +1,25 @@
 import { MessagesSquare } from "lucide-react";
 import { ConversationList } from "@/components/Inbox";
+import { latestConversationId, Thread } from "@/components/Thread";
 import { Empty, Page, PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 
 export default async function Messages() {
   const user = await requireUser(["resident", "student"]);
-  const list = await ConversationList({ user });
+  // On wide screens the newest conversation is already open beside the list; phones get the list alone.
+  const latest = await latestConversationId(user);
+  const list = await ConversationList({ user, activeId: latest ?? undefined, activeOnWide: true });
 
   return (
     <Page>
-      <PageHeader eyebrow="Inbox" title="Messages" />
-      {list ? (
+      <div className="lg:hidden">
+        <PageHeader eyebrow="Inbox" title="Messages" />
+      </div>
+      {list && latest ? (
         <div className="grid items-start gap-8 lg:grid-cols-[24rem_1fr]">
           {list}
-          <div className="hidden rounded-xl border border-dashed border-line px-6 py-28 text-center lg:block">
-            <span className="tile mx-auto mb-5 h-14 w-14">
-              <MessagesSquare size={24} strokeWidth={1.4} />
-            </span>
-            <p className="text-[22px] tracking-tight">Pick a conversation</p>
-            <p className="mt-1 text-muted">Choose someone on the left to read and reply.</p>
+          <div className="hidden lg:block">
+            <Thread user={user} id={latest} />
           </div>
         </div>
       ) : (

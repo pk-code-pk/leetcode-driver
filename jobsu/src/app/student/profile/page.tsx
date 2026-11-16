@@ -156,8 +156,16 @@ export default async function StudentProfile({ searchParams }: Props) {
 
           <Link href="/student/payouts" className="group flex items-center justify-between rounded-xl border border-line p-6 transition-colors hover:border-ink">
             <span>
-              <span className="block text-[18px] tracking-tight">Getting paid</span>
-              <span className="text-[14px] text-muted">Set up where your earnings go</span>
+              <span className="block text-[18px] tracking-tight">Earnings</span>
+              <span className="text-[14px] text-muted">What you&apos;ve been paid and what&apos;s on the way</span>
+            </span>
+            <span className="sq transition-transform duration-500 group-hover:rotate-45" />
+          </Link>
+
+          <Link href={`/students/${user.id}`} className="group flex items-center justify-between rounded-xl border border-line p-6 transition-colors hover:border-ink">
+            <span>
+              <span className="block text-[18px] tracking-tight">Public profile</span>
+              <span className="text-[14px] text-muted">See the full page families open</span>
             </span>
             <span className="sq transition-transform duration-500 group-hover:rotate-45" />
           </Link>

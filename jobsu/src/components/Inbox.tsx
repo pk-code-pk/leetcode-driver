@@ -7,7 +7,16 @@ import { timeAgo } from "@/lib/dates";
 import { publicName } from "@/lib/queries";
 
 /** The list of conversations, shown beside the open thread on wide screens. */
-export async function ConversationList({ user, activeId }: { user: User; activeId?: string }) {
+export async function ConversationList({
+  user,
+  activeId,
+  activeOnWide,
+}: {
+  user: User;
+  activeId?: string;
+  /** Highlight the active row only on wide screens, where its thread is shown beside the list. */
+  activeOnWide?: boolean;
+}) {
   const isResident = user.role === "resident";
   const other = isResident ? conversations.studentId : conversations.residentId;
 
@@ -33,7 +42,7 @@ export async function ConversationList({ user, activeId }: { user: User; activeI
         const lastRead = isResident ? convo.residentLastReadAt : convo.studentLastReadAt;
         const active = convo.id === activeId;
         const unread =
-          !active && convo.lastMessageAt != null && lastSender !== user.id && (lastRead == null || lastRead < convo.lastMessageAt);
+          (!active || activeOnWide) && convo.lastMessageAt != null && lastSender !== user.id && (lastRead == null || lastRead < convo.lastMessageAt);
         const name = isResident ? publicName(o) : o.firstName;
         return (
           <Link
@@ -41,7 +50,7 @@ export async function ConversationList({ user, activeId }: { user: User; activeI
             href={`/messages/${convo.id}`}
             aria-current={active ? "page" : undefined}
             data-testid="conversation"
-            className={`flex items-center gap-3.5 px-4 py-4 transition-colors ${active ? "bg-tint" : "hover:bg-ice"}`}
+            className={`flex items-center gap-3.5 px-4 py-4 transition-colors ${active ? (activeOnWide ? "hover:bg-ice lg:bg-tint" : "bg-tint") : "hover:bg-ice"}`}
           >
             <Avatar name={name} size={44} />
             <span className="min-w-0 flex-1">

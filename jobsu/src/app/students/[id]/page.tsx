@@ -10,9 +10,9 @@ import { completedJobCounts, fullName, publicName, ratingsFor, visibleReviewsFor
 
 type Props = { params: Promise<{ id: string }> };
 
-/** A student's profile, visible to staff and to residents the student has applied to or worked for. */
+/** A student's profile, visible to staff, to the student, and to residents the student has applied to or worked for. */
 export default async function StudentPublicProfile({ params }: Props) {
-  const viewer = await requireUser(["resident", "admin"]);
+  const viewer = await requireUser(["resident", "admin", "student"]);
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const [row] = await db
@@ -23,7 +23,9 @@ export default async function StudentPublicProfile({ params }: Props) {
     .limit(1);
   if (!row) notFound();
 
-  let hasBooked = viewer.role === "admin";
+  // Students can preview their own page, never anyone else's.
+  if (viewer.role === "student" && viewer.id !== id) notFound();
+  let hasBooked = viewer.role !== "resident";
   if (viewer.role === "resident") {
     const applied = await db
       .select({ id: applications.id })
