@@ -31,7 +31,10 @@ export function adminEmails(): string[] {
 }
 
 export function appUrl(): string {
-  return (process.env.APP_URL || "http://localhost:3100").replace(/\/$/, "");
+  return (
+    process.env.APP_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3100")
+  ).replace(/\/$/, "");
 }
 
 export function showDevCodes(): boolean {
