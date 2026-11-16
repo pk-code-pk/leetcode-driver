@@ -5,3 +5,4 @@ node_modules
 test-results
 playwright-report
 tsconfig.tsbuildinfo
+next-env.d.ts
