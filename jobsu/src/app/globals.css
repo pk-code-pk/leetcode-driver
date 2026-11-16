@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #0b1b3a;
+  --color-blue: #1f4b99;
+  --color-blue-hover: #2d5fbf;
+  --color-ice: #f5f8ff;
+  --color-line: #e6ecff;
+  --color-muted: #5b6b88;
+  --color-green: #22c55e;
+  --color-green-dark: #16a34a;
+  --color-green-deep: #15803d;
+  --color-green-bg: #f0fdf4;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
+  background: var(--color-ice);
+  color: var(--color-navy);
+  font-family: var(--font-sans);
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply bg-blue text-white hover:bg-blue-hover;
+  }
+  .btn-green {
+    @apply bg-green-dark text-white hover:bg-green-deep;
+  }
+  .btn-outline {
+    @apply border border-line bg-white text-navy hover:border-blue;
+  }
+  .btn-danger {
+    @apply border border-red-200 bg-white text-red-700 hover:bg-red-50;
+  }
+  .card {
+    @apply rounded-2xl border border-line bg-white p-5;
+  }
+  .input {
+    @apply w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-navy outline-none focus:border-blue;
+  }
+  .label {
+    @apply mb-1 block text-sm font-semibold text-navy;
+  }
+  .hint {
+    @apply mt-1 text-xs text-muted;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+}
