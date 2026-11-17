@@ -47,7 +47,9 @@ npm run dev                 # http://localhost:3100
 ```
 
 Seeded logins (password `password123`): `admin@jobsu.app`, `sarah@example.com` (resident),
-`jake@bc.edu`, `maya@bc.edu`, `chris@bc.edu` (students).
+`jake@bc.edu`, `maya@bc.edu`, `chris@bc.edu` (students). Sample data is for local use only:
+deploys don't create it. To remove it from a database, run `npm run remove-demo` (a dry run
+that lists what would go), then `npm run remove-demo -- --yes`.
 
 With `DEV_SHOW_CODES=true`, email confirmation codes are shown on screen so you don't need
 a real inbox. Turn that off in production.

@@ -5,11 +5,12 @@
   "scripts": {
     "dev": "next dev -p ${PORT:-3100}",
     "build": "next build",
-    "vercel-build": "DATABASE_URL=${DATABASE_URL_UNPOOLED:-$DATABASE_URL} drizzle-kit push --force && tsx scripts/seed.ts && next build",
+    "vercel-build": "DATABASE_URL=${DATABASE_URL_UNPOOLED:-$DATABASE_URL} drizzle-kit push --force && next build",
     "start": "next start -p ${PORT:-3100}",
     "db:push": "drizzle-kit push --force",
     "db:studio": "drizzle-kit studio",
     "seed": "tsx scripts/seed.ts",
+    "remove-demo": "tsx scripts/remove-demo.ts",
     "auto-release": "tsx scripts/auto-release.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
