@@ -3,7 +3,7 @@ import { and, asc, desc, eq, or, sql } from "drizzle-orm";
 import { Banknote, CalendarDays, MapPin } from "lucide-react";
 import { sendMessage } from "@/app/actions/social";
 import { ActionForm, SubmitButton } from "./forms";
-import { Avatar, JobStatusBadge, Meta } from "./ui";
+import { Avatar, JobStatusBadge, Meta, photoUrl } from "./ui";
 import { db } from "@/db";
 import { conversations, jobs, messages, users, type User } from "@/db/schema";
 import { formatDate, timeAgo } from "@/lib/dates";
@@ -53,7 +53,7 @@ export async function Thread({ user, id, markRead }: { user: User; id: string; m
     <section className="overflow-hidden rounded-xl border border-line">
       <header className="flex items-center justify-between gap-4 px-5 py-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-4">
-          <Avatar name={name} size={48} verified={isResident} />
+          <Avatar name={name} size={48} verified={isResident} src={photoUrl(other)} />
           <div className="min-w-0">
             <h1 className="truncate text-[24px] leading-tight tracking-tight">{name}</h1>
             <p className="text-[14px] text-muted">{isResident ? "Boston College student" : `Family in ${job.town}`}</p>

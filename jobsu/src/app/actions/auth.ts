@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { residentProfiles, sessions, studentProfiles, users, waitlist } from "@/db/schema";
@@ -17,6 +18,8 @@ import {
 import { TOWNS, adminEmails } from "@/lib/config";
 import { checkStudentEmail, isValidEmail, normalizeEmail } from "@/lib/edu";
 import { sendEmail } from "@/lib/email";
+import { savePhotoFromForm } from "@/lib/photos";
+import { referrerFromCookie } from "@/lib/referrals";
 import type { FormState } from "@/components/forms";
 
 const str = (data: FormData, key: string) => String(data.get(key) ?? "").trim();
@@ -66,6 +69,7 @@ export async function signUpResident(_: FormState, data: FormData): Promise<Form
       firstName: str(data, "firstName"),
       lastName: str(data, "lastName"),
       phone: str(data, "phone"),
+      referredBy: await referrerFromCookie(),
       acceptedTermsAt: now,
       attested18At: now,
     })
@@ -110,6 +114,7 @@ export async function signUpStudent(_: FormState, data: FormData): Promise<FormS
       firstName: str(data, "firstName"),
       lastName: str(data, "lastName"),
       phone: str(data, "phone"),
+      referredBy: await referrerFromCookie(),
       acceptedTermsAt: now,
       attested18At: now,
     })
@@ -204,14 +209,23 @@ export async function updateAccount(_: FormState, data: FormData): Promise<FormS
     .update(users)
     .set({ firstName, lastName: str(data, "lastName"), phone: str(data, "phone") })
     .where(eq(users.id, user.id));
+  const photoError = await savePhotoFromForm(user.id, data);
+  if (photoError) return { error: photoError };
   if (user.role === "resident") {
     const town = str(data, "town");
     if (!TOWNS.includes(town as (typeof TOWNS)[number])) return { error: "Please choose your town." };
     await db
       .update(residentProfiles)
-      .set({ town, landmark: str(data, "landmark") })
+      .set({
+        town,
+        landmark: str(data, "landmark"),
+        hasPets: data.get("hasPets") === "on",
+        hasKids: data.get("hasKids") === "on",
+        notesForStudents: str(data, "notesForStudents").slice(0, 500),
+      })
       .where(eq(residentProfiles.userId, user.id));
   }
+  revalidatePath("/account");
   return { notice: "Saved." };
 }
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, eq, inArray } from "drizzle-orm";
-import { Avatar, EduBadge, JobIcon, Page, SectionTitle, Stars } from "@/components/ui";
+import { Avatar, EduBadge, JobIcon, Page, SectionTitle, Stars, photoUrl } from "@/components/ui";
 import { db } from "@/db";
 import { applications, bookings, jobs, studentProfiles, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
@@ -55,6 +55,10 @@ export default async function StudentPublicProfile({ params }: Props) {
   const name = hasBooked ? fullName(user) : publicName(user);
 
   const facts: [string, React.ReactNode][] = [];
+  if (profile.hometown) facts.push(["From", profile.hometown]);
+  if (profile.minor) facts.push(["Minor", profile.minor]);
+  if (profile.gettingAround) facts.push(["Getting around", profile.gettingAround]);
+  if (profile.funFacts.length) facts.push(["Worth knowing", profile.funFacts.join(" · ")]);
   if (profile.availability) facts.push(["Usually free", profile.availability]);
   if (profile.certifications) facts.push(["Certifications (self-reported)", profile.certifications]);
   if (profile.hasCar) facts.push(["Transport", "Has a car on campus"]);
@@ -69,7 +73,7 @@ export default async function StudentPublicProfile({ params }: Props) {
       <div className="grid items-start gap-12 lg:grid-cols-[1fr_23rem]">
         <div>
           <div className="flex flex-wrap items-center gap-6">
-            <Avatar name={name} size={96} verified />
+            <Avatar name={name} size={96} verified src={photoUrl(user)} />
             <div>
               <EduBadge />
               <h1 className="title mt-3">{name}</h1>

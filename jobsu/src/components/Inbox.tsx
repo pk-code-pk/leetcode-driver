@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { desc, eq, or, sql } from "drizzle-orm";
-import { Avatar } from "./ui";
+import { Avatar, photoUrl } from "./ui";
 import { db } from "@/db";
 import { conversations, jobs, messages, users, type User } from "@/db/schema";
 import { timeAgo } from "@/lib/dates";
@@ -24,7 +24,7 @@ export async function ConversationList({
     .select({
       convo: conversations,
       jobTitle: jobs.title,
-      other: { firstName: users.firstName, lastName: users.lastName },
+      other: { id: users.id, firstName: users.firstName, lastName: users.lastName, photoAt: users.photoAt },
       lastBody: sql<string | null>`(select m.body from ${messages} m where m.conversation_id = ${conversations.id} order by m.created_at desc limit 1)`,
       lastSender: sql<string | null>`(select m.sender_id from ${messages} m where m.conversation_id = ${conversations.id} order by m.created_at desc limit 1)`,
     })
@@ -52,7 +52,7 @@ export async function ConversationList({
             data-testid="conversation"
             className={`flex items-center gap-3.5 px-4 py-4 transition-colors ${active ? (activeOnWide ? "hover:bg-ice lg:bg-tint" : "bg-tint") : "hover:bg-ice"}`}
           >
-            <Avatar name={name} size={44} />
+            <Avatar name={name} size={44} src={photoUrl(o)} />
             <span className="min-w-0 flex-1">
               <span className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-2 truncate text-[17px]">

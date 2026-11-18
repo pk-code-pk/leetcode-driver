@@ -1,16 +1,17 @@
 import Link from "next/link";
-import { and, asc, eq, gte, inArray } from "drizzle-orm";
-import { ArrowUpRight, CalendarDays, Clock, MapPin, Repeat, SearchX } from "lucide-react";
+import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
+import { ArrowUpRight, CalendarDays, Car, Clock, MapPin, Repeat, SearchX, Users } from "lucide-react";
 import { Badge, Empty, JobTile, Meta, Page, PageHeader, Rate } from "@/components/ui";
 import { db } from "@/db";
 import { applications, jobs, studentProfiles } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { TOWNS } from "@/lib/config";
+import { paymentsProvider } from "@/lib/payments";
 import { formatDate, todayISO } from "@/lib/dates";
-import { JOB_TYPES, JOB_TYPE_SLUGS, timingLabel } from "@/lib/jobTypes";
+import { JOB_TYPES, JOB_TYPE_SLUGS, jobType, timingLabel, transportOption } from "@/lib/jobTypes";
 import { formatCents, formatHours, jobTotalCents, parseDollars } from "@/lib/money";
 
-type Props = { searchParams: Promise<{ type?: string; town?: string; minRate?: string; from?: string }> };
+type Props = { searchParams: Promise<{ type?: string; town?: string; minRate?: string; from?: string; view?: string }> };
 
 export default async function StudentJobs({ searchParams }: Props) {
   const user = await requireUser("student");
@@ -24,7 +25,23 @@ export default async function StudentJobs({ searchParams }: Props) {
   if (minRate != null) filters.push(gte(jobs.rateCents, minRate));
   if (q.from && /^\d{4}-\d{2}-\d{2}$/.test(q.from)) filters.push(gte(jobs.startDate, q.from));
 
-  const list = await db.select().from(jobs).where(and(...filters)).orderBy(asc(jobs.startDate)).limit(100);
+  const rows = await db.select().from(jobs).where(and(...filters)).orderBy(asc(jobs.startDate)).limit(100);
+  const counts = rows.length
+    ? await db
+        .select({ jobId: applications.jobId, n: sql<number>`count(*)::int` })
+        .from(applications)
+        .where(and(inArray(applications.jobId, rows.map((j) => j.id)), inArray(applications.status, ["applied", "selected"])))
+        .groupBy(applications.jobId)
+    : [];
+  const appliedCount = new Map(counts.map((c) => [c.jobId, c.n]));
+
+  // "For you" puts the job types on the student's profile first and jobs that
+  // need a car last for students without one. "All jobs" is by date.
+  const forYou = q.view !== "all";
+  const needsCar = (j: (typeof rows)[number]) => Boolean(transportOption(j.transport)?.needsCar);
+  const score = (j: (typeof rows)[number]) =>
+    (profile?.jobTypes.includes(j.type) ? 2 : 0) - (needsCar(j) && !profile?.hasCar ? 3 : 0);
+  const list = forYou ? [...rows].sort((a, b) => score(b) - score(a)) : rows;
   const mine = list.length
     ? await db
         .select({ jobId: applications.jobId })
@@ -33,11 +50,27 @@ export default async function StudentJobs({ searchParams }: Props) {
     : [];
   const applied = new Set(mine.map((m) => m.jobId));
   const filtering = Boolean(q.type || q.town || q.minRate || q.from);
+  const keep = new URLSearchParams(Object.entries(q).filter(([k, v]) => k !== "view" && v) as [string, string][]);
+  const tab = (view: string) => `/student/jobs?${new URLSearchParams([...keep, ...(view === "all" ? [["view", "all"]] : [])]).toString()}`;
   const field = "h-14 w-full bg-transparent px-4 pt-4 text-[15px] text-ink outline-none";
 
   return (
     <Page>
-      <PageHeader eyebrow="For students" title="Jobs near campus" subtitle="The rate is shown up front. Apply in one click." />
+      <PageHeader eyebrow="For students" title="Jobs near campus" subtitle="The rate is shown up front. Applying takes a minute." />
+
+      {paymentsProvider() === "stripe" && !profile?.payoutsEnabled && (
+        <Link
+          href="/student/payouts"
+          className="mb-4 flex items-center justify-between gap-4 rounded-lg bg-amber-50 px-5 py-4 text-amber-900"
+          data-testid="payout-banner"
+        >
+          <span className="flex items-center gap-3">
+            <span className="sq" />
+            Set up payouts to get paid. A family can&apos;t book you until your bank is connected.
+          </span>
+          <ArrowUpRight size={18} strokeWidth={1.5} className="shrink-0" />
+        </Link>
+      )}
 
       {!profile?.bio && (
         <Link href="/student/profile" className="mb-8 flex items-center justify-between gap-4 rounded-lg bg-tint px-5 py-4 text-ink">
@@ -48,6 +81,29 @@ export default async function StudentJobs({ searchParams }: Props) {
           <ArrowUpRight size={18} strokeWidth={1.5} className="shrink-0" />
         </Link>
       )}
+
+      <div className="mb-5 flex gap-1 rounded-lg bg-tint p-1 sm:w-max" role="tablist" aria-label="Sort jobs">
+        {(
+          [
+            ["for-you", "For you"],
+            ["all", "All jobs"],
+          ] as const
+        ).map(([v, label]) => {
+          const on = (v === "all") === !forYou;
+          return (
+            <Link
+              key={v}
+              href={tab(v)}
+              role="tab"
+              aria-selected={on}
+              className={`rounded-md px-4 py-2 text-[14px] transition-colors ${on ? "bg-white text-ink shadow-sm" : "text-muted hover:text-ink"}`}
+            >
+              {label}
+            </Link>
+          );
+        })}
+        {forYou && <span className="hidden self-center px-3 text-[13px] text-faint sm:inline">Sorted by the work you said you&apos;d take on</span>}
+      </div>
 
       {/* One joined filter bar that floats over the list while scrolling */}
       <form method="get" className="glass z-30 mb-8 grid grid-cols-2 rounded-xl sm:sticky sm:top-[84px] sm:grid-cols-[1.2fr_1fr_1fr_1fr_auto]">
@@ -105,6 +161,19 @@ export default async function StudentJobs({ searchParams }: Props) {
                     <p className="text-[22px] leading-tight tracking-tight">{job.title}</p>
                     {applied.has(job.id) && <Badge tone="green">Applied</Badge>}
                   </div>
+                  <p className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px]">
+                    <span className="text-muted">{jobType(job.type).label}</span>
+                    {needsCar(job) && (
+                      <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-amber-800">
+                        <Car size={12} /> Car needed
+                      </span>
+                    )}
+                    {job.studentsNeeded > 1 && (
+                      <span className="inline-flex items-center gap-1 rounded bg-tint px-1.5 py-0.5 text-ink">
+                        <Users size={12} /> Hiring {job.studentsNeeded}
+                      </span>
+                    )}
+                  </p>
                   <p className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[14px] text-muted">
                     <Meta icon={MapPin}>{job.town}</Meta>
                     <Meta icon={CalendarDays}>
@@ -118,6 +187,13 @@ export default async function StudentJobs({ searchParams }: Props) {
                 <div className="flex items-baseline gap-3 sm:block sm:text-right">
                   <Rate cents={job.rateCents} />
                   <p className="text-[13px] text-faint sm:mt-1">about {formatCents(jobTotalCents(job.rateCents!, job.estMinutes))} total</p>
+                  <p className="text-[13px] sm:mt-1" data-testid="applied-count">
+                    {appliedCount.get(job.id) ? (
+                      <span className="text-muted">{appliedCount.get(job.id)} applied</span>
+                    ) : (
+                      <span className="text-blue">Be the first</span>
+                    )}
+                  </p>
                 </div>
                 <ArrowUpRight
                   size={20}

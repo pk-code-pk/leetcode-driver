@@ -1,5 +1,7 @@
 "use server";
 
+import { savePhotoFromForm } from "@/lib/photos";
+
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray, or } from "drizzle-orm";
@@ -171,10 +173,31 @@ export async function updateStudentProfile(_: FormState, data: FormData): Promis
       hasCar: data.get("hasCar") === "on",
       certifications: str(data, "certifications").slice(0, 300),
       availability: str(data, "availability").slice(0, 300),
+      minor: str(data, "minor").slice(0, 100),
+      hometown: str(data, "hometown").slice(0, 80),
+      gettingAround: str(data, "gettingAround").slice(0, 160),
+      funFacts: [str(data, "fact1"), str(data, "fact2")].map((f) => f.slice(0, 100)).filter(Boolean),
     })
     .where(eq(studentProfiles.userId, user.id));
+  const photoError = await savePhotoFromForm(user.id, data);
+  if (photoError) return { error: photoError };
   revalidatePath("/student/profile");
   return { notice: "Profile saved." };
+}
+
+/** The optional "profile card" questions shown after a student's application. */
+export async function updateProfileCard(_: FormState, data: FormData): Promise<FormState> {
+  const user = await requireUser("student");
+  await db
+    .update(studentProfiles)
+    .set({
+      hometown: str(data, "hometown").slice(0, 80),
+      gettingAround: str(data, "gettingAround").slice(0, 160),
+      funFacts: [str(data, "fact1"), str(data, "fact2")].map((f) => f.slice(0, 100)).filter(Boolean),
+    })
+    .where(eq(studentProfiles.userId, user.id));
+  // The page isn't refreshed, so the student sees this confirmation; the prompt is gone on their next visit.
+  return { notice: "Saved. Families will see this on your profile." };
 }
 
 export async function startPayoutSetup(_: FormState, __: FormData): Promise<FormState> {

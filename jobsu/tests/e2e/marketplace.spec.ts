@@ -64,7 +64,7 @@ test("a job goes from posted to paid and rated", async ({ browser }) => {
   // The resident releases payment: 2.5h x $30 = $75, 10% fee, $67.50 payout.
   await resident.goto(`/resident/jobs/${jobId}`);
   await expect(resident.getByText("Jake marked this done: 2.5 hours, $75")).toBeVisible();
-  await resident.click('button:has-text("release payment")');
+  await resident.click('button:has-text("pay Jake")');
   await expect(resident.getByText("Receipt")).toBeVisible();
   await expect(resident.locator("aside")).toContainText("$75");
 

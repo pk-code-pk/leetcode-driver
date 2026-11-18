@@ -17,7 +17,9 @@ const ts = (name: string) => timestamp(name, { withTimezone: true });
 
 export type Role = "resident" | "student" | "admin";
 
-export const users = pgTable("users", {
+export const users = pgTable(
+  "users",
+  {
   id: id(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
@@ -25,13 +27,18 @@ export const users = pgTable("users", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull().default(""),
   phone: text("phone").notNull().default(""),
+  photoAt: ts("photo_at"), // when the profile photo was last set; null = no photo
+  referralCode: text("referral_code"),
+  referredBy: uuid("referred_by"),
   emailVerifiedAt: ts("email_verified_at"),
   suspendedAt: ts("suspended_at"),
   suspendedReason: text("suspended_reason"),
   acceptedTermsAt: ts("accepted_terms_at").notNull(),
   attested18At: ts("attested_18_at").notNull(),
   createdAt: createdAt(),
-});
+  },
+  (t) => [uniqueIndex("users_referral_code_idx").on(t.referralCode)],
+);
 
 export const sessions = pgTable("sessions", {
   id: id(),
@@ -61,6 +68,10 @@ export const studentProfiles = pgTable("student_profiles", {
   hasCar: boolean("has_car").notNull().default(false),
   certifications: text("certifications").notNull().default(""), // self-reported, not verified
   availability: text("availability").notNull().default(""),
+  hometown: text("hometown").notNull().default(""),
+  gettingAround: text("getting_around").notNull().default(""),
+  funFacts: text("fun_facts").array().notNull().default([]),
+  minor: text("minor").notNull().default(""),
   strikes: integer("strikes").notNull().default(0),
   stripeAccountId: text("stripe_account_id"),
   payoutsEnabled: boolean("payouts_enabled").notNull().default(false),
@@ -72,6 +83,16 @@ export const residentProfiles = pgTable("resident_profiles", {
   town: text("town").notNull(),
   landmark: text("landmark").notNull().default(""), // never shown publicly
   heardFrom: text("heard_from").notNull().default(""),
+  hasPets: boolean("has_pets").notNull().default(false),
+  hasKids: boolean("has_kids").notNull().default(false),
+  notesForStudents: text("notes_for_students").notNull().default(""),
+});
+
+// Profile photos, kept apart from users so ordinary queries stay small.
+export const photos = pgTable("photos", {
+  userId: uuid("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  dataUrl: text("data_url").notNull(), // small JPEG, resized in the browser
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const waitlist = pgTable("waitlist", {
@@ -100,6 +121,8 @@ export const jobs = pgTable(
     startTime: text("start_time").notNull().default(""),
     estMinutes: integer("est_minutes").notNull(),
     rateCents: integer("rate_cents"), // null = "not sure", admin suggests one
+    studentsNeeded: integer("students_needed").notNull().default(1),
+    transport: text("transport").notNull().default(""), // see TRANSPORT in jobTypes
     status: text("status").$type<JobStatus>().notNull(),
     reviewReasons: text("review_reasons").array().notNull().default([]),
     adminNote: text("admin_note").notNull().default(""),
@@ -108,7 +131,9 @@ export const jobs = pgTable(
   (t) => [index("jobs_status_idx").on(t.status), index("jobs_resident_idx").on(t.residentId)],
 );
 
-export type ApplicationStatus = "applied" | "selected" | "declined" | "withdrawn";
+// "declined": not picked because the job filled up (can reopen if a place frees up).
+// "passed": the resident turned this applicant down (stays closed).
+export type ApplicationStatus = "applied" | "selected" | "declined" | "passed" | "withdrawn";
 
 export const applications = pgTable(
   "applications",
@@ -161,7 +186,11 @@ export const bookings = pgTable(
     disputedAt: ts("disputed_at"),
     createdAt: createdAt(),
   },
-  (t) => [uniqueIndex("bookings_job_idx").on(t.jobId), index("bookings_status_idx").on(t.status)],
+  (t) => [
+    uniqueIndex("bookings_application_idx").on(t.applicationId),
+    index("bookings_job_idx").on(t.jobId),
+    index("bookings_status_idx").on(t.status),
+  ],
 );
 
 export const conversations = pgTable(

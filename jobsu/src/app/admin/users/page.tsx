@@ -2,7 +2,7 @@ import Link from "next/link";
 import { desc } from "drizzle-orm";
 import { setSuspended } from "@/app/actions/admin";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { Avatar, Badge, Page, PageHeader } from "@/components/ui";
+import { Avatar, Badge, Page, PageHeader, photoUrl } from "@/components/ui";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
@@ -19,7 +19,7 @@ export default async function AdminUsers() {
         {all.map((u) => (
           <div key={u.id} className="card rounded-none border-0 px-5 py-5 sm:px-6">
             <div className="flex flex-wrap items-center gap-4">
-              <Avatar name={`${u.firstName} ${u.lastName}`} size={44} verified={u.role === "student" && Boolean(u.emailVerifiedAt)} />
+              <Avatar name={`${u.firstName} ${u.lastName}`} size={44} verified={u.role === "student" && Boolean(u.emailVerifiedAt)} src={photoUrl(u)} />
               <div className="min-w-0 flex-1">
                 <p className="text-[19px] tracking-tight">
                   {u.role === "student" ? (

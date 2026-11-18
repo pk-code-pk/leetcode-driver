@@ -12,6 +12,12 @@ import {
   ShoppingBag,
   Sparkles,
   Star,
+  PartyPopper,
+  KeyRound,
+  SprayCan,
+  LifeBuoy,
+  Megaphone,
+  FolderOpen,
   type LucideIcon,
 } from "lucide-react";
 import type { BookingStatus, JobStatus } from "@/db/schema";
@@ -26,6 +32,12 @@ const JOB_ICONS: Record<string, LucideIcon> = {
   "tech-setup": Laptop,
   errands: ShoppingBag,
   organizing: Home,
+  "party-help": PartyPopper,
+  "house-sitting": KeyRound,
+  cleaning: SprayCan,
+  lifeguarding: LifeBuoy,
+  "social-media": Megaphone,
+  "office-help": FolderOpen,
   other: Sparkles,
 };
 
@@ -55,8 +67,23 @@ export function Stars({ rating, count }: { rating: number | null; count?: number
   );
 }
 
-/** Initials in a rounded square; verified students get a small check. */
-export function Avatar({ name, size = 40, verified }: { name: string; size?: number; verified?: boolean }) {
+/** Where a user's photo is served from, or null when they haven't added one. */
+export function photoUrl(user: { id: string; photoAt?: Date | null }): string | null {
+  return user.photoAt ? `/api/photos/${user.id}?v=${user.photoAt.getTime()}` : null;
+}
+
+/** A photo, or initials in a rounded square; verified students get a small check. */
+export function Avatar({
+  name,
+  size = 40,
+  verified,
+  src,
+}: {
+  name: string;
+  size?: number;
+  verified?: boolean;
+  src?: string | null;
+}) {
   const initials = name
     .split(" ")
     .map((p) => p[0])
@@ -66,12 +93,24 @@ export function Avatar({ name, size = 40, verified }: { name: string; size?: num
     .toUpperCase();
   return (
     <span className="relative inline-flex shrink-0" style={{ width: size, height: size }} aria-hidden>
-      <span
-        className="flex h-full w-full items-center justify-center bg-deep text-white"
-        style={{ fontSize: size * 0.36, borderRadius: Math.max(6, size * 0.2), letterSpacing: "0.02em" }}
-      >
-        {initials}
-      </span>
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt=""
+          width={size}
+          height={size}
+          className="h-full w-full bg-tint object-cover"
+          style={{ borderRadius: Math.max(6, size * 0.2) }}
+        />
+      ) : (
+        <span
+          className="flex h-full w-full items-center justify-center bg-deep text-white"
+          style={{ fontSize: size * 0.36, borderRadius: Math.max(6, size * 0.2), letterSpacing: "0.02em" }}
+        >
+          {initials}
+        </span>
+      )}
       {verified && (
         <span className="absolute -bottom-1 -right-1 rounded-full bg-white p-px">
           <BadgeCheck size={Math.max(14, size * 0.34)} className="fill-blue text-white" />

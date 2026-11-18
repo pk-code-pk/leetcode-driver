@@ -1,12 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { applications, bookings, jobs, reports, reviews, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { appUrl } from "@/lib/config";
-import { releaseBooking } from "@/lib/bookings";
+import { FILLED_STATUSES, releaseBooking, syncJobStatus } from "@/lib/bookings";
 import { sendEmail } from "@/lib/email";
 import { notifyMatchingStudents } from "@/lib/jobFlow";
 import { formatRate, parseDollars, rateError } from "@/lib/money";
@@ -97,7 +97,13 @@ export async function resolveDispute(_: FormState, data: FormData): Promise<Form
     .update(bookings)
     .set({ status: "cancelled", cancelledBy: "admin", cancelledAt: new Date() })
     .where(eq(bookings.id, booking.id));
-  await db.update(jobs).set({ status: "cancelled" }).where(eq(jobs.id, booking.jobId));
+  // Close the job unless other students on it are still booked or paid.
+  const others = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(and(eq(bookings.jobId, booking.jobId), inArray(bookings.status, [...FILLED_STATUSES])));
+  if (others.length === 0) await db.update(jobs).set({ status: "cancelled" }).where(eq(jobs.id, booking.jobId));
+  else await syncJobStatus(booking.jobId);
   revalidatePath("/admin");
   return { notice: "Hold released. The resident was not charged." };
 }

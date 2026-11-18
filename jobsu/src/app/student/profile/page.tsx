@@ -2,10 +2,14 @@ import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { updateStudentProfile } from "@/app/actions/social";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { Avatar, EduBadge, Field, JobIcon, Notice, Page, PageHeader, SectionTitle, Stars } from "@/components/ui";
+import { PhotoInput } from "@/components/PhotoInput";
+import { ReferralCard } from "@/components/ReferralCard";
+import { Avatar, EduBadge, Field, JobIcon, Notice, Page, PageHeader, SectionTitle, Stars, photoUrl } from "@/components/ui";
 import { db } from "@/db";
 import { studentProfiles } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { appUrl } from "@/lib/config";
+import { referralCodeFor, referralCount } from "@/lib/referrals";
 import { JOB_TYPES, jobType } from "@/lib/jobTypes";
 import { completedJobCounts, publicName, ratingsFor, visibleReviewsFor } from "@/lib/queries";
 
@@ -18,6 +22,21 @@ export default async function StudentProfile({ searchParams }: Props) {
   const rating = (await ratingsFor([user.id])).get(user.id)!;
   const completed = (await completedJobCounts([user.id])).get(user.id) ?? 0;
   const reviews = await visibleReviewsFor([user.id]);
+  const [code, referred] = await Promise.all([referralCodeFor(user), referralCount(user.id)]);
+
+  // What a family looks at, in rough order of how much it matters to them.
+  const checks: [boolean, string][] = [
+    [Boolean(user.photoAt), "Add a photo"],
+    [profile.bio.length >= 20, "Write a short bio"],
+    [Boolean(profile.gradYear), "Add your class year"],
+    [profile.jobTypes.length > 0, "Pick the jobs you want"],
+    [Boolean(profile.major), "Add your major"],
+    [Boolean(profile.availability), "Say when you're free"],
+    [Boolean(profile.hometown), "Say where you're from"],
+    [profile.funFacts.length > 0, "Add something worth knowing about you"],
+  ];
+  const percent = Math.round((checks.filter(([ok]) => ok).length / checks.length) * 100);
+  const nextStep = checks.find(([ok]) => !ok)?.[1];
 
   return (
     <Page>
@@ -32,6 +51,9 @@ export default async function StudentProfile({ searchParams }: Props) {
           <section>
             <SectionTitle>About you</SectionTitle>
             <div className="rule mt-5 space-y-6 pt-7">
+              <Field label="Photo" hint="Families are much more likely to book someone they can recognise.">
+                <PhotoInput current={photoUrl(user)} />
+              </Field>
               <div className="grid gap-6 sm:grid-cols-2">
                 <Field label="First name">
                   <input name="firstName" className="input" required defaultValue={user.firstName} />
@@ -46,6 +68,14 @@ export default async function StudentProfile({ searchParams }: Props) {
                 </Field>
                 <Field label="Major">
                   <input name="major" className="input" defaultValue={profile.major} maxLength={100} />
+                </Field>
+              </div>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <Field label="Minor (optional)">
+                  <input name="minor" className="input" defaultValue={profile.minor} maxLength={100} />
+                </Field>
+                <Field label="Where are you from?">
+                  <input name="hometown" className="input" defaultValue={profile.hometown} maxLength={80} placeholder="Darien, CT" />
                 </Field>
               </div>
               <Field label="Bio">
@@ -99,6 +129,19 @@ export default async function StudentProfile({ searchParams }: Props) {
               <Field label="Certifications (optional)" hint="For example CPR or lifeguarding. Self-reported: JobsU doesn't verify these.">
                 <input name="certifications" className="input" maxLength={300} defaultValue={profile.certifications} />
               </Field>
+              <Field label="How do you get around?">
+                <input
+                  name="gettingAround"
+                  className="input"
+                  maxLength={160}
+                  defaultValue={profile.gettingAround}
+                  placeholder="I have a car, so I can get to jobs a short drive from campus."
+                />
+              </Field>
+              <Field label="Two things worth knowing about you" hint="First names only, yours and anyone else you mention.">
+                <input name="fact1" className="input" maxLength={100} defaultValue={profile.funFacts[0] ?? ""} placeholder="Coached my little brother's soccer team" />
+                <input name="fact2" className="input mt-2" maxLength={100} defaultValue={profile.funFacts[1] ?? ""} placeholder="Grew up with two golden retrievers" />
+              </Field>
               <Field label="Phone (optional)" hint="Only shared with a family once they've booked you.">
                 <input name="phone" type="tel" className="input" defaultValue={user.phone} />
               </Field>
@@ -117,11 +160,21 @@ export default async function StudentProfile({ searchParams }: Props) {
         </ActionForm>
 
         <aside className="space-y-6 lg:sticky lg:top-28">
+          <section className="rounded-xl border border-line p-6" data-testid="completeness">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-[18px] tracking-tight">Profile {percent}% complete</h2>
+              {nextStep && <span className="text-[13px] text-faint">Next: {nextStep.toLowerCase()}</span>}
+            </div>
+            <span className="mt-3 block h-1.5 overflow-hidden rounded-full bg-line">
+              <span className="block h-full rounded-full bg-deep transition-[width] duration-700" style={{ width: `${percent}%` }} />
+            </span>
+          </section>
+
           {/* How a family sees this student in their applicant list */}
           <section className="glass rounded-xl p-6">
             <h2 className="caption text-muted">How families see you</h2>
             <div className="mt-5 flex items-center gap-4">
-              <Avatar name={publicName(user)} size={56} verified />
+              <Avatar name={publicName(user)} size={56} src={photoUrl(user)} verified />
               <div>
                 <p className="text-[24px] leading-tight tracking-tight">{publicName(user)}</p>
                 <p className="text-[14px] text-muted">
@@ -169,6 +222,8 @@ export default async function StudentProfile({ searchParams }: Props) {
             </span>
             <span className="sq transition-transform duration-500 group-hover:rotate-45" />
           </Link>
+
+          <ReferralCard url={`${appUrl()}/r/${code}`} count={referred} who="a friend" />
 
           <p className="px-1 text-[14px] text-faint">
             Need to change your password?{" "}

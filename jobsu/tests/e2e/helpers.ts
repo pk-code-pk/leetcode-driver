@@ -1,4 +1,5 @@
 import { expect, type Browser, type Page } from "@playwright/test";
+import path from "node:path";
 import postgres from "postgres";
 
 export const PASSWORD = "password123";
@@ -79,9 +80,21 @@ export async function postJob(page: Page, { title, rate = "30", hours = "3", des
   return new URL(page.url()).pathname.split("/").pop()!;
 }
 
+export const PHOTO = path.join(__dirname, "fixtures", "face.png");
+
+/** Applies to a job, filling in the one-time profile basics (photo, class year) when asked. */
 export async function applyTo(page: Page, jobId: string) {
   await page.goto(`/student/jobs/${jobId}`);
-  await page.click('button:has-text("Apply in one click")');
+  const photo = page.locator("input[type=file]");
+  if (await photo.count()) {
+    await photo.setInputFiles(PHOTO);
+    await expect(page.getByRole("button", { name: "Change photo" }).first()).toBeVisible();
+  }
+  if (await page.locator("select[name=gradYear]").count()) {
+    await page.selectOption("select[name=gradYear]", { index: 2 });
+  }
+  await page.fill("textarea[name=note]", "I've raked plenty of yards and I'm free this weekend.");
+  await page.click('button:has-text("Apply")');
   await expect(page.getByText("You applied")).toBeVisible();
 }
 

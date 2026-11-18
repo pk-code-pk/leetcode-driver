@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { and, desc, eq, sql } from "drizzle-orm";
-import { ArrowUpRight, CalendarDays, ClipboardList, Clock } from "lucide-react";
+import { ArrowUpRight, CalendarDays, ClipboardList, Clock, RotateCcw, Users } from "lucide-react";
 import { CountUp } from "@/components/motion";
 import { Badge, Empty, JobStatusBadge, JobTile, Meta, Page, PageHeader, Rate } from "@/components/ui";
 import { db } from "@/db";
@@ -17,6 +17,7 @@ export default async function ResidentJobs() {
       // Written out by hand: inside a single-table select, a column placeholder loses its table name.
       applicants: sql<number>`(select count(*)::int from applications a where a.job_id = "jobs"."id" and a.status = 'applied')`,
       awaitingConfirm: sql<boolean>`exists (select 1 from bookings b where b.job_id = "jobs"."id" and b.status = 'completed_pending')`,
+      doneBy: sql<string | null>`(select string_agg(u.first_name || ' ' || left(u.last_name, 1) || '.', ', ') from bookings b join users u on u.id = b.student_id where b.job_id = "jobs"."id" and b.status = 'completed')`,
     })
     .from(jobs)
     .where(and(eq(jobs.residentId, user.id)))
@@ -84,14 +85,21 @@ export default async function ResidentJobs() {
                     <span className="num text-faint">{String(list.length).padStart(2, "0")}</span>
                   </h2>
                   <div className="rows">
-                    {list.map(({ job, applicants, awaitingConfirm }) => (
-                      <Link key={job.id} href={`/resident/jobs/${job.id}`} className="row group">
+                    {list.map(({ job, applicants, awaitingConfirm, doneBy }) => (
+                      <div key={job.id} className="row group relative">
                 <span className="hidden sm:block"><JobTile type={job.type} size={48} /></span>
                 <div className="min-w-0 flex-1">
-                  <p className="line-clamp-2 text-[19px] leading-snug tracking-tight sm:line-clamp-none sm:truncate sm:text-[20px]">{job.title}</p>
+                  <Link
+                    href={`/resident/jobs/${job.id}`}
+                    className="line-clamp-2 text-[19px] leading-snug tracking-tight after:absolute after:inset-0 sm:line-clamp-none sm:truncate sm:text-[20px]"
+                  >
+                    {job.title}
+                  </Link>
                   <p className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-[14px] text-muted">
                     <Meta icon={CalendarDays}>{formatDate(job.startDate)}</Meta>
                     <Meta icon={Clock}>{formatHours(job.estMinutes)}</Meta>
+                    {job.studentsNeeded > 1 && <Meta icon={Users}>{job.studentsNeeded} students</Meta>}
+                    {doneBy && <span>Done by {doneBy}</span>}
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
@@ -101,6 +109,11 @@ export default async function ResidentJobs() {
                     </Badge>
                   )}
                   {awaitingConfirm ? <Badge tone="amber">Confirm it&apos;s done</Badge> : <JobStatusBadge status={job.status} />}
+                  {(job.status === "completed" || job.status === "cancelled") && (
+                    <Link href={`/resident/jobs/new?from=${job.id}`} className="btn btn-outline btn-sm relative z-10">
+                      <RotateCcw size={14} strokeWidth={1.75} /> Repost
+                    </Link>
+                  )}
                 </div>
                 <div className="hidden w-28 text-right sm:block">
                   <Rate cents={job.rateCents} />
@@ -110,7 +123,7 @@ export default async function ResidentJobs() {
                   strokeWidth={1.5}
                   className="shrink-0 text-faint transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-ink"
                 />
-              </Link>
+              </div>
                     ))}
                   </div>
                 </section>

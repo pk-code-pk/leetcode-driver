@@ -13,6 +13,7 @@ import { ratingsFor } from "@/lib/queries";
 const APP_LABEL: Record<string, [string, Tone]> = {
   applied: ["Applied", "green"],
   declined: ["Not selected", "slate"],
+  passed: ["Not selected", "slate"],
   withdrawn: ["Withdrawn", "slate"],
 };
 
@@ -28,7 +29,7 @@ export default async function MyJobs() {
     .select({ app: applications, job: jobs })
     .from(applications)
     .innerJoin(jobs, eq(jobs.id, applications.jobId))
-    .where(and(eq(applications.studentId, user.id), inArray(applications.status, ["applied", "declined", "withdrawn"])))
+    .where(and(eq(applications.studentId, user.id), inArray(applications.status, ["applied", "declined", "passed", "withdrawn"])))
     .orderBy(desc(applications.createdAt));
 
   const active = booked.filter((b) => ["authorized", "completed_pending", "disputed"].includes(b.booking.status));

@@ -1,11 +1,32 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { bookings, jobs, users } from "@/db/schema";
+import { bookings, jobs, users, type JobStatus } from "@/db/schema";
 import { autoReleaseDue, todayISO } from "./dates";
 import { sendEmail } from "./email";
 import { formatCents, settle } from "./money";
 import { capturePayment } from "./payments";
 import { appUrl } from "./config";
+
+/** Bookings that hold a place on a job (in progress or finished). */
+export const FILLED_STATUSES = ["authorized", "completed_pending", "disputed", "completed"] as const;
+
+/**
+ * A job can need several students. Work out its status from its bookings:
+ * open while places remain, booked once every place is filled, completed once
+ * every booked student is paid. Cancelled and in-review jobs are left alone.
+ */
+export async function syncJobStatus(jobId: string): Promise<JobStatus | null> {
+  const [job] = await db.select().from(jobs).where(eq(jobs.id, jobId)).limit(1);
+  if (!job || job.status === "cancelled" || job.status === "pending_review") return job?.status ?? null;
+  const rows = await db
+    .select({ status: bookings.status })
+    .from(bookings)
+    .where(and(eq(bookings.jobId, jobId), inArray(bookings.status, [...FILLED_STATUSES])));
+  const inProgress = rows.filter((r) => r.status !== "completed").length;
+  const status: JobStatus = rows.length >= job.studentsNeeded ? (inProgress ? "booked" : "completed") : "open";
+  if (status !== job.status) await db.update(jobs).set({ status }).where(eq(jobs.id, jobId));
+  return status;
+}
 
 export type ReleaseKind = "confirmed" | "auto" | "admin";
 
@@ -37,7 +58,7 @@ export async function releaseBooking(bookingId: string, kind: ReleaseKind): Prom
       payoutCents: s.payoutCents,
     })
     .where(eq(bookings.id, bookingId));
-  await db.update(jobs).set({ status: "completed" }).where(eq(jobs.id, booking.jobId));
+  await syncJobStatus(booking.jobId);
 
   const people = await db.select().from(users).where(inArray(users.id, [booking.residentId, booking.studentId]));
   const resident = people.find((u) => u.id === booking.residentId);

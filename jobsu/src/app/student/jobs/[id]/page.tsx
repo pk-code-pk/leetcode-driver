@@ -2,13 +2,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { applyToJob, markComplete, studentCancelBooking, withdrawApplication } from "@/app/actions/jobs";
+import { updateProfileCard } from "@/app/actions/social";
+import { PhotoInput } from "@/components/PhotoInput";
+import { Baby, Car, Dog, StickyNote, Users } from "lucide-react";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { JobFacts, Progress, Receipt, ReviewPanel, Timeline, type TimelineEvent } from "@/components/job";
-import { Back, Badge, BookingStatusBadge, Field, Notice, Page, Rate, Stars } from "@/components/ui";
+import { Avatar, Back, Badge, BookingStatusBadge, Field, Notice, Page, Rate, Stars, photoUrl } from "@/components/ui";
 import { db } from "@/db";
-import { applications, bookings, conversations, jobs, users } from "@/db/schema";
+import { applications, bookings, conversations, jobs, residentProfiles, studentProfiles, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { PLATFORM_FEE_BPS } from "@/lib/config";
+import { transportOption } from "@/lib/jobTypes";
 import { formatCents, formatHours, jobTotalCents, settle } from "@/lib/money";
 import { ratingsFor } from "@/lib/queries";
 
@@ -37,6 +41,14 @@ export default async function StudentJob({ params }: Props) {
   if (job.status !== "open" && !app && !mine) notFound();
 
   const [resident] = await db.select().from(users).where(eq(users.id, job.residentId)).limit(1);
+  const [home] = await db.select().from(residentProfiles).where(eq(residentProfiles.userId, resident.id)).limit(1);
+  const [me] = await db.select().from(studentProfiles).where(eq(studentProfiles.userId, user.id)).limit(1);
+  // The first application also fills in the basics of the student's profile.
+  const needPhoto = !user.photoAt;
+  const needBasics = !me?.gradYear || !me?.bio;
+  const cardEmpty = !me?.hometown && !me?.gettingAround && (me?.funFacts.length ?? 0) === 0;
+  const thisYear = new Date().getFullYear();
+  const transport = transportOption(job.transport);
   const residentRating = (await ratingsFor([resident.id])).get(resident.id)!;
   const [convo] = await db
     .select()
@@ -77,7 +89,51 @@ export default async function StudentJob({ params }: Props) {
 
         <div className="mt-10 space-y-12">
           {mine?.status === "completed" && <ReviewPanel booking={mine} viewerId={user.id} otherName={resident.firstName} />}
-          <JobFacts job={job} showLandmark />
+          <JobFacts job={job} showLandmark={Boolean(mine)} />
+
+          {/* What the family told us about their home and the job set-up. */}
+          <section className="rounded-xl border border-line p-6" data-testid="about-family">
+            <div className="flex items-center gap-4">
+              <Avatar name={resident.firstName} size={48} src={photoUrl(resident)} />
+              <div>
+                <p className="text-[19px] tracking-tight text-ink">
+                  {resident.firstName} {mine ? resident.lastName : resident.lastName ? `${resident.lastName[0]}.` : ""}
+                </p>
+                <p className="text-[14px] text-muted">
+                  {job.town}
+                  {mine ? "" : " · Full name and address shared once you're booked"}
+                </p>
+              </div>
+            </div>
+            <ul className="mt-5 grid gap-3 text-[15px] text-ink sm:grid-cols-2">
+              {job.studentsNeeded > 1 && (
+                <li className="flex items-center gap-2.5">
+                  <Users size={16} strokeWidth={1.5} className="text-faint" /> Hiring {job.studentsNeeded} students
+                </li>
+              )}
+              {transport && (
+                <li className="flex items-center gap-2.5">
+                  <Car size={16} strokeWidth={1.5} className="text-faint" /> {transport.label}
+                </li>
+              )}
+              {home?.hasPets && (
+                <li className="flex items-center gap-2.5">
+                  <Dog size={16} strokeWidth={1.5} className="text-faint" /> Pets at home
+                </li>
+              )}
+              {home?.hasKids && (
+                <li className="flex items-center gap-2.5">
+                  <Baby size={16} strokeWidth={1.5} className="text-faint" /> Children at home
+                </li>
+              )}
+            </ul>
+            {home?.notesForStudents && (
+              <p className="inset mt-5 flex gap-2.5 text-[15px] text-ink">
+                <StickyNote size={16} strokeWidth={1.5} className="mt-1 shrink-0 text-faint" />
+                {home.notesForStudents}
+              </p>
+            )}
+          </section>
         </div>
         </div>
 
@@ -91,23 +147,92 @@ export default async function StudentJob({ params }: Props) {
                   <span className="text-ink">{formatCents(estimate.payoutCents)}</span> after the {PLATFORM_FEE_BPS / 100}% JobsU fee.
                 </p>
               )}
-              <ActionForm action={applyToJob} className="rule mt-5 space-y-4 pt-5">
+              <ActionForm action={applyToJob} className="rule mt-5 space-y-5 pt-5">
                 <input type="hidden" name="jobId" value={job.id} />
-                <Field label="Add a note (optional)">
+                {(needPhoto || needBasics) && (
+                  <div className="space-y-4 rounded-lg bg-tint p-4">
+                    <div>
+                      <p className="text-[15px] text-ink">First, a little about you</p>
+                      <p className="text-[13px] text-muted">{resident.firstName} sees this when deciding who to pick. You only fill it in once.</p>
+                    </div>
+                    {needPhoto && (
+                      <Field label="Profile photo">
+                        <PhotoInput required />
+                      </Field>
+                    )}
+                    {!me?.gradYear && (
+                      <Field label="Class year">
+                        <select name="gradYear" className="input" required defaultValue="">
+                          <option value="" disabled>
+                            Select year
+                          </option>
+                          {[0, 1, 2, 3, 4, 5].map((n) => (
+                            <option key={n}>{thisYear + n}</option>
+                          ))}
+                        </select>
+                      </Field>
+                    )}
+                    {!me?.bio && (
+                      <>
+                        <Field label="Short bio" hint="What you're studying and the kind of work you've done. Families see your first name and last initial.">
+                          <textarea name="bio" className="input min-h-20" required minLength={20} maxLength={500} />
+                        </Field>
+                        <fieldset>
+                          <legend className="label">Do you have access to a car?</legend>
+                          <div className="flex gap-4 text-ink">
+                            <label className="flex items-center gap-2">
+                              <input type="radio" name="hasCar" value="yes" required /> Yes
+                            </label>
+                            <label className="flex items-center gap-2">
+                              <input type="radio" name="hasCar" value="no" /> No
+                            </label>
+                          </div>
+                        </fieldset>
+                      </>
+                    )}
+                  </div>
+                )}
+                <Field label="Why are you a good fit for this one?" hint="A sentence or two. This is the first thing the family reads.">
                   <textarea
                     name="note"
                     className="input min-h-24"
+                    required
+                    minLength={20}
                     maxLength={600}
-                    placeholder="Why you're a good fit, or a question for the family."
+                    placeholder="What you've done before, or what you'd bring to this job."
                   />
                 </Field>
-                <SubmitButton className="btn btn-primary w-full">Apply in one click</SubmitButton>
+                <SubmitButton className="btn btn-primary w-full">Apply</SubmitButton>
+                <p className="text-[12px] leading-snug text-faint">
+                  By applying, you agree to do this and any future work with this family through JobsU.
+                </p>
               </ActionForm>
             </section>
           )}
 
           {!mine && app?.status === "withdrawn" && (
             <Notice tone="slate">You withdrew your application for this job.</Notice>
+          )}
+
+          {app?.status === "applied" && !mine && cardEmpty && (
+            <section className="glass rounded-xl p-6" data-testid="profile-card-prompt">
+              <h2 className="text-[22px] tracking-tight">Your application is in</h2>
+              <p className="mt-1 text-[14px] text-muted">A few things families like to know. All optional.</p>
+              <ActionForm action={updateProfileCard} className="mt-5 space-y-4">
+                <input type="hidden" name="jobId" value={job.id} />
+                <Field label="Where are you from?">
+                  <input name="hometown" className="input" maxLength={80} placeholder="Newton, MA" />
+                </Field>
+                <Field label="How do you get around?">
+                  <input name="gettingAround" className="input" maxLength={160} placeholder="I have a car, so I can get to jobs a short drive from campus." />
+                </Field>
+                <Field label="Two things worth knowing about you">
+                  <input name="fact1" className="input" maxLength={100} placeholder="Coached my little brother's soccer team" />
+                  <input name="fact2" className="input mt-2" maxLength={100} placeholder="Grew up with two golden retrievers" />
+                </Field>
+                <SubmitButton className="btn btn-primary w-full">Save</SubmitButton>
+              </ActionForm>
+            </section>
           )}
 
           {app?.status === "applied" && !mine && (
@@ -130,7 +255,7 @@ export default async function StudentJob({ params }: Props) {
             </section>
           )}
 
-          {app?.status === "declined" && <Notice tone="slate">The family went with another student for this job.</Notice>}
+          {(app?.status === "declined" || app?.status === "passed") && <Notice tone="slate">The family went with another student for this job.</Notice>}
 
           {mine?.status === "authorized" && (
             <section className="glass rounded-xl p-6">

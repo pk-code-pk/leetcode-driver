@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { toggleRecommended } from "@/app/actions/admin";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { JobFacts, Receipt } from "@/components/job";
-import { Avatar, Back, Badge, BookingStatusBadge, JobStatusBadge, Page, SectionTitle, Stars } from "@/components/ui";
+import { Avatar, Back, Badge, BookingStatusBadge, JobStatusBadge, Page, SectionTitle, Stars, photoUrl } from "@/components/ui";
 import { db } from "@/db";
 import { applications, bookings, jobs, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
@@ -19,7 +19,7 @@ export default async function AdminJob({ params }: Props) {
   const [job] = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
   if (!job) notFound();
   const [resident] = await db.select().from(users).where(eq(users.id, job.residentId)).limit(1);
-  const [booking] = await db.select().from(bookings).where(eq(bookings.jobId, job.id)).limit(1);
+  const jobBookings = await db.select().from(bookings).where(eq(bookings.jobId, job.id));
   const apps = await db
     .select({ app: applications, user: users })
     .from(applications)
@@ -33,7 +33,8 @@ export default async function AdminJob({ params }: Props) {
       <Back href="/admin/jobs">Jobs</Back>
       <div className="mt-8 flex flex-wrap items-center gap-3">
         <JobStatusBadge status={job.status} />
-        {booking && <BookingStatusBadge status={booking.status} />}
+        {jobBookings.map((b) => <BookingStatusBadge key={b.id} status={b.status} />)}
+        {job.studentsNeeded > 1 && <Badge tone="slate">Needs {job.studentsNeeded} students</Badge>}
       </div>
       <h1 className="title mt-4 max-w-[20ch]">{job.title}</h1>
       <p className="mt-4 text-muted">
@@ -48,7 +49,7 @@ export default async function AdminJob({ params }: Props) {
             <div className="mt-5 border-b border-line">
               {apps.map(({ app, user }) => (
                 <div key={app.id} className="rule flex flex-wrap items-center gap-4 py-5">
-                  <Avatar name={`${user.firstName} ${user.lastName}`} size={48} verified />
+                  <Avatar name={`${user.firstName} ${user.lastName}`} size={48} verified src={photoUrl(user)} />
                   <div className="min-w-0 flex-1">
                     <Link href={`/students/${user.id}`} className="link text-[20px] tracking-tight">
                       {user.firstName} {user.lastName}
@@ -74,7 +75,9 @@ export default async function AdminJob({ params }: Props) {
           </section>
           <JobFacts job={job} showLandmark />
         </div>
-        <aside className="lg:sticky lg:top-28">{booking && <Receipt booking={booking} forStudent />}</aside>
+        <aside className="space-y-6 lg:sticky lg:top-28">
+          {jobBookings.map((b) => <Receipt key={b.id} booking={b} forStudent />)}
+        </aside>
       </div>
     </Page>
   );

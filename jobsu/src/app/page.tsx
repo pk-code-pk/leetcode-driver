@@ -46,7 +46,7 @@ const RESIDENT_STEPS: [string, string][] = [
 const STUDENT_STEPS: [string, string][] = [
   ["Create your profile", "Confirm with your .edu email. No application, no resume needed."],
   ["Browse nearby jobs", "Filter by type, pay and date. The rate is shown before you apply."],
-  ["Apply in one click", "Do the job, mark it done, and get paid through JobsU."],
+  ["Apply in a minute", "Do the job, mark it done, and get paid through JobsU."],
 ];
 
 const WHY: [string, string][] = [

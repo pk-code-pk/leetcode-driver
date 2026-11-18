@@ -42,15 +42,23 @@ async function main() {
       await db.insert(studentProfiles).values({
         userId: user.id, school: "Boston College", gradYear: 2028, major, bio, jobTypes,
         hasCar: first === "Chris", availability: "Weekday afternoons, most weekends", enrollmentConfirmedAt: now,
+        ...(first === "Jake" && {
+          hometown: "Columbus, OH",
+          gettingAround: "Walk or take the T. Happy to bike to Newton.",
+          funFacts: ["Two summers on a landscaping crew", "Eagle Scout"],
+        }),
       });
     }
   }
 
   const { user: sarah, created } = await person("sarah@example.com", "resident", "Sarah", "Miller");
   if (created) {
-    await db.insert(residentProfiles).values({ userId: sarah.id, town: "Newton", landmark: "Near Newton Centre T stop" });
+    await db.insert(residentProfiles).values({
+      userId: sarah.id, town: "Newton", landmark: "Near Newton Centre T stop", hasPets: true, hasKids: true,
+      notesForStudents: "Our dog Biscuit is friendly but excitable. Park in the driveway.",
+    });
     await db.insert(jobs).values([
-      { residentId: sarah.id, type: "yard-work", title: "Rake leaves in the back yard", description: "Back yard is covered in leaves. Need them raked and bagged. Rakes and bags provided.", answers: { size: "Medium", tools: "Yes" }, town: "Newton", landmark: "Near Newton Centre T stop", timing: "one-time", startDate: day(3), startTime: "10:00", estMinutes: 180, rateCents: 3000, status: "open" },
+      { residentId: sarah.id, type: "yard-work", title: "Rake leaves in the back yard", description: "Back yard is covered in leaves. Need them raked and bagged. Rakes and bags provided.", answers: { size: "Medium", tools: "Yes" }, town: "Newton", landmark: "Near Newton Centre T stop", timing: "one-time", startDate: day(3), startTime: "10:00", estMinutes: 180, rateCents: 3000, studentsNeeded: 2, transport: "walkable", status: "open" },
       { residentId: sarah.id, type: "babysitting", title: "Date-night sitter for two kids", description: "Looking for a sitter for Friday evening. Kids will have eaten; bedtime is 8.", answers: { kids: "Two kids, ages 4 and 7", pets: "One friendly dog" }, town: "Newton", landmark: "Near Newton Centre T stop", timing: "occasional", startDate: day(5), startTime: "18:00", estMinutes: 240, rateCents: 2800, status: "open" },
       { residentId: sarah.id, type: "tech-setup", title: "Set up a new printer and Wi-Fi extender", description: "New printer needs connecting to two laptops, and the Wi-Fi doesn't reach the top floor.", answers: { device: "Printer and Wi-Fi extender" }, town: "Newton", landmark: "Near Newton Centre T stop", timing: "one-time", startDate: day(2), startTime: "16:00", estMinutes: 90, rateCents: null, status: "pending_review", reviewReasons: ["Needs a suggested rate"] },
     ]);
